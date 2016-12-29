@@ -7,6 +7,8 @@ with a custom codegenerator which creates the HTML dom via react.
 Note that this project is in very early stage of development. Still, help in building rich user interface libraries
 is welcome ;)
 
-[1] https://guide.elm-lang.org/architecture/
-[2] http://fable.io/fable-arch/
-[3] https://facebook.github.io/react/
+ [1] https://guide.elm-lang.org/architecture/
+ 
+ [2] http://fable.io/fable-arch/
+ 
+ [3] https://facebook.github.io/react/
