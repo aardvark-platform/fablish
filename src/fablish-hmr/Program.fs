@@ -9,6 +9,7 @@ open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Interactive.Shell
 
 let stronglyReadFile (fileName : string) =
+    if not <| File.Exists fileName then failwithf "interactive file not found: %s" fileName
     let mutable worked = None
     while Option.isNone worked do
         try 
@@ -129,7 +130,7 @@ let run (fileName : string) (workingDirectory : string) =
         let result = fsiSession.EvalInteraction (getCode())
         printfn "%s \n~> %A" (outStream.ToString()) result
     with e -> 
-        failwithf "initial evaluation failed %s" (errStream.ToString())
+        failwithf "initial evaluation failed %s: %A" (errStream.ToString()) e.Message
 
     let evalExpressionTyped (text) = 
         match fsiSession.EvalExpression(text) with
@@ -175,13 +176,21 @@ let run (fileName : string) (workingDirectory : string) =
         else
             System.Windows.Forms.Application.DoEvents()
 
+open Fablish
+
 [<EntryPoint>]
 let main argv = 
-    printfn "System.IntPtr.Size: %A" System.IntPtr.Size
+
+    ChromiumUtilities.unpackCef()
+    Chromium.init argv
+    System.Diagnostics.Debug.WriteLine(sprintf "URDAR: %A" argv)
     //let file = @"C:\Development\aardvark-fablish\src\Aardvark.UI.Fablish\Interactive.fsx"
     //let workingDirectory = @"C:\Development\aardvark-fablish\bin\Release"
     match argv with
-        | [|file;outputDir|] -> run (Path.GetFullPath(file)) (Path.GetFullPath(outputDir))
+        | [|file;outputDir|] -> 
+            let path = Path.GetFullPath outputDir
+            System.Environment.CurrentDirectory <- path
+            run ( Path.GetFullPath(file) ) path
         | _ -> () //failwith "usage: file.fsx outputDir"
             
     0 

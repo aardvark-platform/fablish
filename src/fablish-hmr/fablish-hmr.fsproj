@@ -27,7 +27,7 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>false</Prefer32Bit>
-    <StartArguments>..\..\..\Aardvark.UI.Fablish\Interactive.fsx ..\..\..\..\\bin\Debug</StartArguments>
+    <StartArguments>..\..\..\fablish\src\Fablish\Interactive.fsx ..\..\..\..\bin\Debug</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -61,6 +61,13 @@
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="Test.fsx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fablish\Fablish.fsproj">
+      <Name>Fablish</Name>
+      <Project>{8ed617b0-00ad-4b23-948f-4217a819b720}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

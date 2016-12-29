@@ -55,12 +55,15 @@ module Chromium =
 
             CefRuntime.Initialize(mainArgs,settings,app,IntPtr.Zero)
 
+            Application.ApplicationExit.Add(fun _ -> 
+                CefRuntime.Shutdown()
+            )
             AppDomain.CurrentDomain.ProcessExit.Add(fun _ -> 
                 CefRuntime.Shutdown()
             )
     
     let runControl (port : string) (app : App<'model,'msg, DomNode<'msg>>) =
-        if not initialized then failwith "run Chromium.init argv before running a control."
+       // if not initialized then failwith "run Chromium.init argv before running a control."
 
         let url,t,ct = Fablish.serveLocally port app
 
