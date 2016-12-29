@@ -1,0 +1,1 @@
+..\fablish-hmr\bin\Debug\fablish-hmr.exe Interactive.fsx ..\..\bin\Debug

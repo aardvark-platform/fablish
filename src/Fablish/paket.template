@@ -1,0 +1,8 @@
+type project
+id Fablish
+authors VRVis Research Center
+description
+    Elm architecture for user interfaces implemented in .NET
+frameworkAssemblies
+    System.Drawing
+	System.Windows.Forms
