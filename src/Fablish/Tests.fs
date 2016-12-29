@@ -30,6 +30,7 @@ module PerformanceTest =
             initial = 10000
             update = update
             view = view
+            onRendered = Scripts.ignore
         }
 
 module MetroTest =
@@ -62,4 +63,5 @@ module MetroTest =
             initial = 10000
             update = update
             view = view
+            onRendered = Scripts.ignore
         }

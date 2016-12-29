@@ -33,6 +33,7 @@ module HelloWorld =
             initial = 0
             update = update 
             view = view
+            onRendered = Scripts.ignore
         }
 
 let browser = Chromium.runControl "8083" HelloWorld.app

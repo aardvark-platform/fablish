@@ -30,29 +30,22 @@
 
     <script>
 
-		function allowDrop(ev) {
-			ev.preventDefault();
-		}
-
-		function drag() {
-					console.log("ASDF");
-			ev.dataTransfer.setData("text", ev.target.id);
-		}
-
-		function drop(ev) {
-			ev.preventDefault();
-			var data = ev.dataTransfer.getData("text");
-			ev.target.appendChild(document.getElementById(data));
-		}
-
-
-		function blubber(event) {
-			console.log("asdf" + event);
-		};
-
         $(document).ready(function() {
 			console.log("$(document).ready");
 
+			function getNodePosition(node) {
+			    var top = left = 0;
+			    while (node) {
+			        if (node.tagName) {
+			            top = top + node.offsetTop;
+			            left = left + node.offsetLeft;
+			            node = node.offsetParent;
+			        } else {
+			            node = node.parentNode;
+			        }
+			    }
+			    return [top, left];
+			}
 
 			var React = window.React;
 			var ReactDOM = window.ReactDOM;
@@ -79,16 +72,23 @@
 			var renderer = ReactDOM.render(React.createElement(RendererComp,null), document.getElementById('__root__'));
 
 		     connection.onmessage = function (e) {
-		     	  console.log('message received.');
-		     	  renderer.setCode(e.data);
-		     	  renderer.render();
-
-		     	  $('.ui.dropdown')
-                   .dropdown();
-        	      $('.ui.accordion')
-                   .accordion();
-        	      $('.menu .item')
-                   .tab();
+                console.log('message received.');
+                
+                var msg = JSON.parse(e.data);
+                
+                renderer.setCode(msg.dom);
+                renderer.render();
+                
+                console.log('rendered.');
+                var result = eval(msg.script)();
+                console.log('result was: ' + result);
+                
+                var msg = { id: 2, data: { eventId: "0", eventValue: JSON.stringify(result) } };
+                connection.send(JSON.stringify(msg));
+                
+                $('.ui.dropdown').dropdown();
+                $('.ui.accordion').accordion();
+                $('.menu .item').tab();
 		     };
 
 			function send(eventId,event)  {
@@ -119,15 +119,11 @@
 		});
 
     </script>
-
-
 </head>
 
 <body>
-
     <div id="__root__">
     </div>
-
 </body>
 
 </html> 

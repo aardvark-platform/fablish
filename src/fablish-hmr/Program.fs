@@ -183,14 +183,12 @@ let main argv =
 
     ChromiumUtilities.unpackCef()
     Chromium.init argv
-    System.Diagnostics.Debug.WriteLine(sprintf "URDAR: %A" argv)
-    //let file = @"C:\Development\aardvark-fablish\src\Aardvark.UI.Fablish\Interactive.fsx"
-    //let workingDirectory = @"C:\Development\aardvark-fablish\bin\Release"
+
     match argv with
         | [|file;outputDir|] -> 
             let path = Path.GetFullPath outputDir
             System.Environment.CurrentDirectory <- path
             run ( Path.GetFullPath(file) ) path
-        | _ -> () //failwith "usage: file.fsx outputDir"
+        | _ -> failwith "usage: file.fsx outputDir"
             
     0 

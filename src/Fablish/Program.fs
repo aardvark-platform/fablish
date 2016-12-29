@@ -32,6 +32,7 @@ module PerformanceTest =
             initial = 10000
             update = update
             view = view
+            onRendered = Scripts.ignore
         }
 
 module MetroTest =
@@ -64,6 +65,7 @@ module MetroTest =
             initial = 10000
             update = update
             view = view
+            onRendered = Scripts.ignore
         }
 
 
@@ -86,7 +88,7 @@ module TestApp =
         div [] [
             text (sprintf "current content: %d" m)
             br []
-            button [onMouseClick (fun dontCare -> Inc)] [text "increment"]
+            button [onMouseClick (fun dontCare -> Inc); attribute "id" "urdar"] [text "increment"]
             button [onMouseClick (fun dontCare -> Dec)] [text "decrement"]
         ]
 
@@ -95,6 +97,10 @@ module TestApp =
             initial = 0
             update = update 
             view = view
+            onRendered = fun _ _ -> """() => { 
+                var rect = document.getElementById("urdar").getBoundingClientRect();
+                return { bottom : rect.bottom, height : rect.height, left : rect.left, right : rect.right, top : rect.top, width : rect.width }; 
+            } """
         }
 
 
@@ -121,6 +127,7 @@ module ManyTestThings =
             initial = [ 1; 2; 3 ]
             update = update
             view = view
+            onRendered = Scripts.ignore
         }
     
 

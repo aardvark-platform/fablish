@@ -82,6 +82,7 @@ module NumericApp =
         initial = initial
         update = update
         view = view
+        onRendered = Scripts.ignore
     }
 
 module V3dApp = 
@@ -111,6 +112,7 @@ module V3dApp =
             initial = initial
             view = view
             update = update
+            onRendered = Scripts.ignore
     }
 
 module TrafoApp = 
@@ -301,6 +303,7 @@ module ToggleApp =
             initial = initial
             view = view
             update = update
+            onRendered = Scripts.ignore
     }
 
 module ValueApp = 
