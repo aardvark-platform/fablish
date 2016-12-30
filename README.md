@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/vrvis/fablish.svg?branch=master)](https://travis-ci.org/vrvis/fablish)
+[![Build status](https://ci.appveyor.com/api/projects/status/caihtu3i3697i6o2/branch/master?svg=true)](https://ci.appveyor.com/project/haraldsteinlechner/fablish/branch/master)
+
 # Fablish
 This library provides utilities for building Elm style [[1]] applications in .NET.
 In contrast to fable [[2]], which uses a F# to JS compiler, this library runs directly in your favorite CLR. 
@@ -18,7 +21,7 @@ fablish is useful if your use case looks like:
  - you want purely functional user interfaces
  - you want to profit from web technology and tooling
  - you want solid technology for rendering your ui (browsers are superfast ;)
- - you still want native .net programs since your application state cannot be run in the broser alone (e.g. you are rendering several GB of data?)
+ - you still want native .net programs since your application state cannot be run in the broser alone (e.g. you are rendering several GB of data as we do in other projects based on the aardvar rendering engine [aardvark.rendering](https://github.com/vrvis/aardvark.rendering))
 
 ## Write Elm Style Application using similar API to fable:
 
