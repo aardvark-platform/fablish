@@ -79,7 +79,7 @@ In both cases your application can be debugged using chrome debugging tools:
 
 ## Building
 
-- run ``build.cmd`` or ``build.sh`` (F# and .net or mono needs to be installed)
+- run ``build.cmd`` or ``build.sh`` (F# 4.0 [[9]] and .net or mono needs to be installed)
 - you can also use the prebuilt package currently available here: https://vrvis.myget.org/feed/aardvark_public/package/nuget/Fablish
 
 ## Debugging
@@ -110,3 +110,5 @@ is welcome ;)
  [7]: https://suave.io/
 
  [8]: http://fable.io/fable-arch/
+ 
+ [9]: https://www.microsoft.com/en-us/download/details.aspx?id=48179
