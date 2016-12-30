@@ -55,14 +55,14 @@ module TestApp =
 ## Since by default we use chromium for rendering UIs, initialize chromium:
 ```F#
 ChromiumUtilities.unpackCef() // downloads CEF build if not already present
-Chromium.init argv            // initialized CEF runtime
+Chromium.init argv            // initialize CEF runtime (mind argv being the executable arguments as usual)
 ```
 
 ## Run your app
 
 Either use application setup to spawn a win forms window with embedded chrome and your UI:
 ```F#
-let browser = Chromium.runControl "8083" app
+let browser = Chromium.runControl "8083" app // start websocket hosting app on port 8083, i.e. UI is available at localhost:8083/mainPage and can be debugged by using chrome on localhost:1337
 use w = new Form()
 w.Controls.Add browser
 w.Width <- 800
@@ -72,18 +72,18 @@ Application.Run(w)
 
 or use a standalone server:
 ```F#
-Fablish.runLocally "8083" app
+Fablish.runLocally "8083" app // run websocket on port 8083 and serve website requests on localhost:8083 while a debug web page is available for chrome on localhost:1337
 ```
 
 In both cases your application can be debugged using chrome debugging tools:
 
 ## Building
 
-- run ``build.cmd`` or ``build.sh`` (F# and .net or mono needs to be installed)
+- run ``build.cmd`` or ``build.sh`` (F# 4.0 [[9]] and .net or mono needs to be installed)
 - you can also use the prebuilt package currently available here: https://vrvis.myget.org/feed/aardvark_public/package/nuget/Fablish
 
 ## Debugging
-https://github.com/vrvis/fablish/blob/master/docs/teaser.png
+
 ![alt text](docs/teaser.png)
 
 ## Interactive Development
@@ -110,3 +110,5 @@ is welcome ;)
  [7]: https://suave.io/
 
  [8]: http://fable.io/fable-arch/
+ 
+ [9]: https://www.microsoft.com/en-us/download/details.aspx?id=48179

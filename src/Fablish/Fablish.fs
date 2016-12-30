@@ -62,7 +62,7 @@ module Fablish =
     let render v = 
         let topLevelWrapped = div [] [v] // some libs such as react do crazy shit with top level element
         let (_,r),dom = State.run (0, Map.empty) (Fable.Helpers.Virtualdom.ReactDomRenderer.render ignore topLevelWrapped)
-        printfn "generated code: \n%s" dom
+        //printfn "generated code: \n%s" dom
         dom,r
 
     let (|Int|_|) (s : string) =
@@ -102,12 +102,12 @@ module Fablish =
                 let view                = app.view model 
                 let vdom, registrations = render view
                 sw.Stop()
-                printfn "rendering took: %f milliseconds" sw.Elapsed.TotalMilliseconds
+                printfn "[fablish] rendering performed in %f milliseconds" sw.Elapsed.TotalMilliseconds
 
                 let script = app.onRendered model view
                 let bytes = { dom = vdom; script = script } |> Pickler.json.Pickle 
 
-                printfn "writing %f kb to client" (float bytes.Length / 1024.0)
+                printfn "[fablish] writing %f kb to client" (float bytes.Length / 1024.0)
                 do! webSocket.send Opcode.Text bytes true
                 return registrations
             }
@@ -130,19 +130,19 @@ module Fablish =
                                                 let newModel = app.update model msg
                                                 return! runElmLoop newModel registrations
                                             | None -> 
-                                                printfn "dont understand event. id was: %A" eventId
+                                                printfn "[fablish] dont understand event. id was: %A" eventId
                                                 return! runElmLoop model registrations
                                 | Choice1Of2 
                                     { id = id; data = { eventId = Int eventId; eventValue = eventValue} } 
                                       // system event, after rendering view
                                       when id = renderingResult -> 
-                                        printfn "got result: %A" eventValue
+                                        printfn "[fablish] webPage response: %A" eventValue
                                         return! receive registrations
                                 | Choice1Of2 m -> return failwithf "could not understand message: %A" m
                                 | Choice2Of2 m ->  return failwithf "protocol error: %s" m
 
                         | (Opcode.Close, _, _) -> ()
-                        | _ -> return failwithf "protocol error (Web said: %A instead of text or close)" msg
+                        | _ -> return failwithf "[fablish] protocol error (Web said: %A instead of text or close)" msg
              }
             socket {
                 let! registrations = send model
@@ -174,7 +174,15 @@ module Fablish =
             NOT_FOUND "Found no handlers."
         ]
 
+    let logo = """                                                       
+,------. ,---.  ,-----.  ,--.   ,--. ,---.  ,--.  ,--. 
+|  .---'/  O  \ |  |) /_ |  |   |  |'   .-' |  '--'  | 
+|  `--,|  .-.  ||  .-.  \|  |   |  |`.  `-. |  .--.  | 
+|  |`  |  | |  ||  '--' /|  '--.|  |.-'    ||  |  |  | 
+`--'   `--' `--'`------' `-----'`--'`-----' `--'  `--'"""
+
     let serve address port app =
+        printfn "%s" logo
         let path = "static/index.html"
 
         let config =
@@ -189,7 +197,7 @@ module Fablish =
         let urla = if IPAddress.IsLoopback address then "localhost" else sprintf "%A" address
         
         let t = Async.StartAsTask(server,cancellationToken = cts.Token)
-        listening |> Async.RunSynchronously |> printfn "start stats: %A"
+        listening |> Async.RunSynchronously |> printfn "[Fablish-suave] start stats: %A"
         sprintf "http://%s:%s/mainPage" urla port, t, cts
 
     let serveLocally port app = serve IPAddress.Loopback port app
