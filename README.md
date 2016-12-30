@@ -10,7 +10,7 @@ The overall architecture is as such:
  - javascript code generator for building React DOM
  - websocket via suave [[7]] provides dom to static webpage
  - the webpage utilizes websocket and react to update and render the DOM
- - the overall application can be hosted in any browser or by using the battery included chromium window.
+ - the overall application can be hosted in the browser alone or by using the battery included chromium window.
 
 ## When to use
 
