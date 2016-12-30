@@ -2,28 +2,28 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/caihtu3i3697i6o2/branch/master?svg=true)](https://ci.appveyor.com/project/haraldsteinlechner/fablish/branch/master)
 
 # Fablish
-This library provides utilities for building Elm style [[1]] applications in .NET.
-In contrast to fable [[2]], which uses a F# to JS compiler, this library runs directly in your favorite CLR. 
-However, in order to stay somewhat compatible we reused fable-archs API but replaced the virtualdom backend
-for technickal reasons with a custom codegenerator which creates the HTML dom via react [[3]].
+This library provides utilities for building Elm-style [[1]] applications in .NET.
+In contrast to Fable [[2]], which uses a F# to JS compiler, this library runs directly in your favorite CLR. 
+To stay compatible, we reused Fable-arch's API and replaced the virtualdom backend
+with a custom code generator, which creates the HTML DOM via React [[3]].
 
-The overall architecture is as such:
- - elm architecture similar to fable-arch [[8]]
- - fable style API for building views
- - javascript code generator for building React DOM
- - websocket via suave [[7]] provides dom to static webpage
- - the webpage utilizes websocket and react to update and render the DOM
- - the overall application can be hosted in the browser alone or by using the battery included chromium window.
+The overall architecture is
+ - Elm architecture similar to fable-arch [[8]]
+ - Fable-style API for building views
+ - JavaScript code generator for building React DOM
+ - WebSocket via Suave [[7]] provides DOM to static webpage
+ - the webpage utilizes WebSocket and React to update and render the DOM
+ - the overall application can either be fully hosted inside a browser, or by using a chromium window (which is included).
 
 ## When to use
 
-fablish is useful if your use case looks like:
+Fablish is useful if your use case looks like:
  - you want purely functional user interfaces
  - you want to profit from web technology and tooling
- - you want solid technology for rendering your ui (browsers are superfast ;)
- - you still want native .net programs since your application state cannot be run in the broser alone (e.g. you are rendering several GB of data as we do in other projects based on the aardvar rendering engine [aardvark.rendering](https://github.com/vrvis/aardvark.rendering))
+ - you want solid technology for rendering your ui - browsers are superfast ;)
+ - you still want native .net programs since your application state cannot be run in the broser alone (e.g. you are rendering several GBs of data, as we do in other projects based on the Aardvark rendering platform [aardvark.rendering](https://github.com/vrvis/aardvark.rendering))
 
-## Write Elm Style Application using similar API to fable:
+## Writing an Elm-style Application using an API similar to Fable:
 
 ```F#
 module TestApp =
@@ -55,15 +55,15 @@ module TestApp =
 
 ```
 
-## Since by default we use chromium for rendering UIs, initialize chromium:
+## Since by default we use Chromium for rendering UIs, we have to initialize Chromium:
 ```F#
 ChromiumUtilities.unpackCef() // downloads CEF build if not already present
 Chromium.init argv            // initialize CEF runtime (mind argv being the executable arguments as usual)
 ```
 
-## Run your app
+## Run your application
 
-Either use application setup to spawn a win forms window with embedded chrome and your UI:
+Either use application setup to spawn a window with embedded Chrome and your UI:
 ```F#
 let browser = Chromium.runControl "8083" app // start websocket hosting app on port 8083, i.e. UI is available at localhost:8083/mainPage and can be debugged by using chrome on localhost:1337
 use w = new Form()
@@ -73,12 +73,12 @@ w.Height <- 600
 Application.Run(w) 
 ```
 
-or use a standalone server:
+or use a stand-alone server:
 ```F#
 Fablish.runLocally "8083" app // run websocket on port 8083 and serve website requests on localhost:8083 while a debug web page is available for chrome on localhost:1337
 ```
 
-In both cases your application can be debugged using chrome debugging tools:
+In both cases your application can be debugged using Chrome debugging tools:
 
 ## Building
 
@@ -89,14 +89,15 @@ In both cases your application can be debugged using chrome debugging tools:
 
 ![alt text](docs/teaser.png)
 
-## Interactive Development
+## Interactive development
 
-fablish-hmr [[4]] provides webpack [[5]] style interactive programming by utilizing F# compiler services. A video shows off this feature: [youtube video on hmr](https://www.youtube.com/watch?v=if5Natbyx0s&feature=youtu.be)
+Fablish-hmr [[4]] provides webpack-style [[5]] interactive programming by utilizing F# compiler services.
+The following video shows off this feature: [youtube video on hmr](https://www.youtube.com/watch?v=if5Natbyx0s&feature=youtu.be)
 
 ## How to contribute 
 
-Note that this project is in very early stage of development. Still, help in building rich user interface libraries
-is welcome ;)
+Note that this project is at a very early stage of development.
+Still, any help in building rich user-interface libraries is welcome ;)
 
  [1]: https://guide.elm-lang.org/architecture/
  
