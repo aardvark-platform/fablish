@@ -21,7 +21,7 @@ Fablish is useful if your use case looks like:
  - you want purely functional user interfaces
  - you want to profit from web technology and tooling
  - you want solid technology for rendering your ui - browsers are superfast ;)
- - you still want native .net programs since your application state cannot be run in the broser alone (e.g. you are rendering several GBs of data, as we do in other projects based on the Aardvark rendering platform [aardvark.rendering](https://github.com/vrvis/aardvark.rendering))
+ - you still want native .net programs since your application state cannot be run in the broser alone (e.g. you are rendering several GBs of data, as we do in other projects, based on the Aardvark rendering platform [[10]].
 
 ## Writing an Elm-style Application using an API similar to Fable:
 
@@ -116,3 +116,5 @@ Still, any help in building rich user-interface libraries is welcome ;)
  [8]: http://fable.io/fable-arch/
  
  [9]: https://www.microsoft.com/en-us/download/details.aspx?id=48179
+ 
+ [10]: https://github.com/vrvis/aardvark.rendering
