@@ -124,6 +124,8 @@ module TrafoApp =
 
     type Action = Change of int * V3dApp.Action
 
+    let initial = { vectors = List.init 3 (fun _ -> { components = List.init 3 (fun _ -> NumericApp.initial) })}
+
     let update (model : Model) (action : Action) =
         match action with
             | Change(index, action) ->
@@ -137,6 +139,8 @@ module TrafoApp =
             for n in vectorViews do
                 yield div [] [n]
         ]
+
+    let app = { initial = initial; view = view; update = update; onRendered = Scripts.ignore }
 
 module V3dApp2 =
     open DomHelpers

@@ -142,7 +142,7 @@ let main argv =
             components = [ NumericApp.initial; NumericApp.initial; NumericApp.initial ]            
             }
 
-    let app = TestApp.app
+    let app = TrafoApp.app
     let runWindow = true        
 
     if runWindow then
