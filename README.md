@@ -55,7 +55,7 @@ module TestApp =
 ## Since by default we use chromium for rendering UIs, initialize chromium:
 ```F#
 ChromiumUtilities.unpackCef() // downloads CEF build if not already present
-Chromium.init argv            // initialized CEF runtime
+Chromium.init argv            // initialize CEF runtime (mind argv being the executable arguments as usual)
 ```
 
 ## Run your app
