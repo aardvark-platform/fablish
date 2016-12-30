@@ -62,7 +62,7 @@ Chromium.init argv            // initialized CEF runtime
 
 Either use application setup to spawn a win forms window with embedded chrome and your UI:
 ```F#
-let browser = Chromium.runControl "8083" app
+let browser = Chromium.runControl "8083" app // start websocket hosting app on port 8083, i.e. UI is available at localhost:8083/mainPage and can be debugged by using chrome on localhost:1337
 use w = new Form()
 w.Controls.Add browser
 w.Width <- 800
@@ -72,7 +72,7 @@ Application.Run(w)
 
 or use a standalone server:
 ```F#
-Fablish.runLocally "8083" app
+Fablish.runLocally "8083" app // run websocket on port 8083 and serve website requests on localhost:8083 while a debug web page is available for chrome on localhost:1337
 ```
 
 In both cases your application can be debugged using chrome debugging tools:
