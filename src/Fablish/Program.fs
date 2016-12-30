@@ -135,7 +135,7 @@ module ManyTestThings =
             view = view
             onRendered = OnRendered.ignore
         }
-    
+
 
 [<EntryPoint;STAThread>]
 let main argv =

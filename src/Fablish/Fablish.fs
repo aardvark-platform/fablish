@@ -36,9 +36,12 @@ module OnRendered =
 
 type App<'model,'msg,'view> = 
     {
+        // Elm interface
         initial  : 'model
         update   : 'model -> 'msg -> 'model
         view     : 'model -> 'view
+
+        // IO extensions
         onRendered : OnRendered<'model,'msg,'view>
     }
 
@@ -99,11 +102,13 @@ module Fablish =
     [<Literal>]
     let eventOccurance  = 1
     [<Literal>]
-    let renderingResult = 2
+    let forceRendering = 2
 
     type Event = { eventId : string; eventValue : string }
     type Message = { id : int; data : Event }
     type RenderRequest = { dom : string; script : Script; id : string }
+   
+    type Result<'msg> = NoMessage | Message of 'msg | Termination | ForceRendering
 
     let parseMessage (s : string) =
         try
@@ -137,7 +142,8 @@ module Fablish =
                 return Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) registrations
             }
 
-        let rec receive model registrations = 
+
+        let rec tryReceiveChannel registrations = 
             socket {
                 let! msg = webSocket.read()
                 match msg with
@@ -146,29 +152,45 @@ module Fablish =
                         match msg with
                             | Choice1Of2 
                                 { id = id; data = { eventId = Int eventId; eventValue = eventValue} } 
-                                    // normal event
                                     when id = eventOccurance -> 
                                         match Map.tryFind eventId registrations with
                                             | Some action -> 
                                                 match action eventValue with
                                                     | Some msg -> 
-                                                        let newModel = app.update model msg
-                                                        return! runElmLoop newModel
-                                                    | _ -> return! receive model registrations
+                                                        return Message msg
+                                                    | _ -> 
+                                                        return NoMessage 
                                             | None -> 
                                                 printfn "[fablish] dont understand event. id was: %A" eventId
-                                                return! runElmLoop model
-                            | Choice1Of2 
-                                { id = id; data = { eventId = Int eventId; eventValue = eventValue} } 
-                                    // system event, after rendering view
-                                    when id = renderingResult -> 
-                                        printfn "[fablish] webPage response: %A" eventValue
-                                        return! receive model registrations
-                            | Choice1Of2 m -> return failwithf "could not understand message: %A" m
-                            | Choice2Of2 m ->  return failwithf "protocol error: %s" m
+                                                return NoMessage
+                            | Choice1Of2 { id = id; data = _ } when id = forceRendering -> 
+                                return ForceRendering
+                            | Choice1Of2 m -> 
+                                return failwithf "could not understand message: %A" m
+                            | Choice2Of2 m ->  
+                                return failwithf "protocol error: %s" m
 
-                    | (Opcode.Close, _, _) -> ()
-                    | _ -> return failwithf "[fablish] protocol error (Web said: %A instead of text or close)" msg
+                    | (Opcode.Close, _, _) -> 
+                        return Termination
+                    | _ -> 
+                        return failwithf "[fablish] protocol error (Web said: %A instead of text or close)" msg
+            }
+        
+        and tryReceive registrations = 
+            tryReceiveChannel registrations
+
+        and receive model registrations = 
+            socket {
+                let! result = tryReceive registrations
+                match result with
+                    | Termination -> ()
+                    | Message msg -> 
+                        let newModel = app.update model msg
+                        return! runElmLoop newModel
+                    | NoMessage -> 
+                        return! receive model registrations 
+                    | ForceRendering -> 
+                        return! runElmLoop model
             }
 
         and runElmLoop (model : 'model) =
@@ -194,7 +216,7 @@ module Fablish =
     let runPlain app : WebPart =
         path "/ws" >=> handShake (runConnection app)
 
-    let runApp mainPage app : WebPart =
+    let runApp (mainPage : string) (app : App<_,_,_>) : WebPart =
         choose [
             runPlain app
             GET >=> choose [ path "/mainPage" >=> file mainPage; browseHome ];

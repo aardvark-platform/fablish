@@ -59,23 +59,33 @@
 
 		     connection.onmessage = function (e) {
                 console.log('message received.');
-                
+
                 var msg = JSON.parse(e.data);
-                
+
                 renderer.setCode(msg.dom);
                 renderer.render();
-                
+
                 console.log('rendered.');
                 var result = eval(msg.script)();
                 console.log('result was: ' + result);
-                
+
                 var msg = { id: 1, data: { eventId: msg.id, eventValue: JSON.stringify(result) } };
                 connection.send(JSON.stringify(msg));
-                
+
                 $('.ui.dropdown').dropdown();
                 $('.ui.accordion').accordion();
                 $('.menu .item').tab();
 		     };
+
+            function sendRefresh() {
+        		var msg = { id : 2, data : { eventId: "nil", eventValue : "nil"}};
+				connection.send(JSON.stringify(msg));
+            }
+
+            window.onresize = function(event) {
+                sendRefresh();
+            };
+
 
 			function send(eventId,event)  {
 				if(event.target.value === undefined)
