@@ -8,7 +8,7 @@ The overall architecture is as such:
  - elm architecture similar to fable-arch
  - fable style API for building views
  - javascript code generator for building React DOM
- - websocket via soave provides dom to static webpage
+ - websocket via suave [[7]] provides dom to static webpage
  - the webpage utilizes websocket and react to update and render the DOM
  - the overall application can be hosted in any browser or by using the battery included chromium window.
 
@@ -106,3 +106,5 @@ is welcome ;)
  [5]: https://webpack.github.io/
 
  [6]: https://www.youtube.com/watch?v=if5Natbyx0s&feature=youtu.be
+
+ [7]: https://suave.io/
