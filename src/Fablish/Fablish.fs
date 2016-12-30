@@ -23,12 +23,23 @@ open Suave.WebSocket
 open System.Text
 
 type Script = string
+
+module Scripts =
+    let ignore = "() => { return {}; }"
+
+type RenderCallback<'msg> = string -> Option<'msg>
+type Reaction<'msg> = { clientSide : Script; serverSide : RenderCallback<'msg>}
+type OnRendered<'model,'msg,'view> = 'model -> 'view -> Reaction<'msg>
+
+module OnRendered =
+    let ignore : 'model -> 'view -> Reaction<'msg> = fun _ _ -> { clientSide = Scripts.ignore; serverSide = fun _ -> None }
+
 type App<'model,'msg,'view> = 
     {
         initial  : 'model
         update   : 'model -> 'msg -> 'model
         view     : 'model -> 'view
-        onRendered : 'model -> 'view -> Script
+        onRendered : OnRendered<'model,'msg,'view>
     }
 
 
@@ -40,9 +51,22 @@ type ID() =
         Interlocked.Increment(&currentId)
     member x.All = [ 0 .. currentId ]
 
+[<AutoOpen>]
+module JavascriptInterop = 
+    // {"bottom":44,"height":25,"left":0,"right":78.734375,"top":19,"width":78.734375}"
+    type ClientRect = { 
+        bottom : float
+        height : float
+        left   : float
+        right  : float
+        top    : float
+        width  : float
+    }
 
-module Scripts =
-    let ignore _ _ = "() => { return {}; }"
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ClientRect =
+        let ofString (s : string) : ClientRect = Pickler.json.UnPickleOfString s
+        let toString (c : ClientRect) = Pickler.json.PickleToString c
 
 module Fablish =
     open Fable.Helpers.Virtualdom
@@ -61,9 +85,9 @@ module Fablish =
 
     let render v = 
         let topLevelWrapped = div [] [v] // some libs such as react do crazy shit with top level element
-        let (_,r),dom = State.run (0, Map.empty) (Fable.Helpers.Virtualdom.ReactDomRenderer.render ignore topLevelWrapped)
+        let (s,r),dom = State.run (0, Map.empty) (Fable.Helpers.Virtualdom.ReactDomRenderer.render ignore topLevelWrapped)
         //printfn "generated code: \n%s" dom
-        dom,r
+        dom,r,s
 
     let (|Int|_|) (s : string) =
         match Int32.TryParse(s) with
@@ -79,7 +103,7 @@ module Fablish =
 
     type Event = { eventId : string; eventValue : string }
     type Message = { id : int; data : Event }
-    type RenderRequest = { dom : string; script : Script }
+    type RenderRequest = { dom : string; script : Script; id : string }
 
     let parseMessage (s : string) =
         try
@@ -99,54 +123,58 @@ module Fablish =
         let send (model : 'model) =
             socket {
                 sw.Restart()
-                let view                = app.view model 
-                let vdom, registrations = render view
+                let view                   = app.view model 
+                let vdom, registrations, s = render view
                 sw.Stop()
                 printfn "[fablish] rendering performed in %f milliseconds" sw.Elapsed.TotalMilliseconds
 
-                let script = app.onRendered model view
-                let bytes = { dom = vdom; script = script } |> Pickler.json.Pickle 
+                let reaction = app.onRendered model view
+                let onRenderedEvt = s + 1
+                let bytes = { dom = vdom; script = reaction.clientSide; id = string onRenderedEvt } |> Pickler.json.Pickle 
 
                 printfn "[fablish] writing %f kb to client" (float bytes.Length / 1024.0)
                 do! webSocket.send Opcode.Text bytes true
-                return registrations
+                return Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) registrations
             }
 
-        let rec runElmLoop (model : 'model) (registrations) =
-            let rec receive registrations = 
-                socket {
-                    let! msg = webSocket.read()
-                    match msg with
-                        | (Opcode.Text, data, true) -> 
-                            let msg = parseMessage (getString data)
-                            match msg with
-                                | Choice1Of2 
-                                    { id = id; data = { eventId = Int eventId; eventValue = eventValue} } 
-                                      // normal event
-                                      when id = eventOccurance -> 
+        let rec receive model registrations = 
+            socket {
+                let! msg = webSocket.read()
+                match msg with
+                    | (Opcode.Text, data, true) -> 
+                        let msg = parseMessage (getString data)
+                        match msg with
+                            | Choice1Of2 
+                                { id = id; data = { eventId = Int eventId; eventValue = eventValue} } 
+                                    // normal event
+                                    when id = eventOccurance -> 
                                         match Map.tryFind eventId registrations with
                                             | Some action -> 
-                                                let msg = action eventValue
-                                                let newModel = app.update model msg
-                                                return! runElmLoop newModel registrations
+                                                match action eventValue with
+                                                    | Some msg -> 
+                                                        let newModel = app.update model msg
+                                                        return! runElmLoop newModel
+                                                    | _ -> return! receive model registrations
                                             | None -> 
                                                 printfn "[fablish] dont understand event. id was: %A" eventId
-                                                return! runElmLoop model registrations
-                                | Choice1Of2 
-                                    { id = id; data = { eventId = Int eventId; eventValue = eventValue} } 
-                                      // system event, after rendering view
-                                      when id = renderingResult -> 
+                                                return! runElmLoop model
+                            | Choice1Of2 
+                                { id = id; data = { eventId = Int eventId; eventValue = eventValue} } 
+                                    // system event, after rendering view
+                                    when id = renderingResult -> 
                                         printfn "[fablish] webPage response: %A" eventValue
-                                        return! receive registrations
-                                | Choice1Of2 m -> return failwithf "could not understand message: %A" m
-                                | Choice2Of2 m ->  return failwithf "protocol error: %s" m
+                                        return! receive model registrations
+                            | Choice1Of2 m -> return failwithf "could not understand message: %A" m
+                            | Choice2Of2 m ->  return failwithf "protocol error: %s" m
 
-                        | (Opcode.Close, _, _) -> ()
-                        | _ -> return failwithf "[fablish] protocol error (Web said: %A instead of text or close)" msg
-             }
+                    | (Opcode.Close, _, _) -> ()
+                    | _ -> return failwithf "[fablish] protocol error (Web said: %A instead of text or close)" msg
+            }
+
+        and runElmLoop (model : 'model) =
             socket {
                 let! registrations = send model
-                return! receive registrations
+                return! receive model registrations
             }
             
         fun cx -> 
@@ -156,7 +184,7 @@ module Fablish =
                     | (Opcode.Text,data,true) -> 
                         let s = getString data
                         if s =  magic then
-                            return! runElmLoop app.initial Map.empty
+                            return! runElmLoop app.initial
                         else 
                             return failwithf "initial handshake failed. Web should have said: %s" magic
                     | _ -> return! failwith "initial handshake failed (should have received text)"
@@ -188,7 +216,6 @@ module Fablish =
         let config =
           { defaultConfig with
              bindings = [ HttpBinding.mk HTTP address (Port.Parse port) ]
-             //homeFolder = Some @"C:\Aardwork\"
           }
         
         let cts = new CancellationTokenSource()

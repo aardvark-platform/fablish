@@ -46,7 +46,7 @@ module GalleryApp =
         initial = model
         update = update
         view = view
-        onRendered = Scripts.ignore
+        onRendered = OnRendered.ignore
     }
 
     let rec visitor dir = 

@@ -82,7 +82,7 @@ module NumericApp =
         initial = initial
         update = update
         view = view
-        onRendered = Scripts.ignore
+        onRendered = OnRendered.ignore
     }
 
 module V3dApp = 
@@ -112,7 +112,7 @@ module V3dApp =
             initial = initial
             view = view
             update = update
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
     }
 
 module TrafoApp = 
@@ -140,7 +140,7 @@ module TrafoApp =
                 yield div [] [n]
         ]
 
-    let app = { initial = initial; view = view; update = update; onRendered = Scripts.ignore }
+    let app = { initial = initial; view = view; update = update; onRendered = OnRendered.ignore }
 
 module V3dApp2 =
     open DomHelpers
@@ -304,7 +304,7 @@ module ToggleApp =
             initial = initial
             view = view
             update = update
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
     }
 
 module ValueApp = 

@@ -32,7 +32,7 @@ module PerformanceTest =
             initial = 10000
             update = update
             view = view
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
         }
 
 module MetroTest =
@@ -65,7 +65,7 @@ module MetroTest =
             initial = 10000
             update = update
             view = view
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
         }
 
 
@@ -92,15 +92,21 @@ module TestApp =
             button [onMouseClick (fun dontCare -> Dec)] [text "decrement"]
         ]
 
+    let onRendered model view =
+        {
+            clientSide = """() => { 
+                var rect = document.getElementById("urdar").getBoundingClientRect();
+                return { bottom : rect.bottom.toFixed(), height : rect.height.toFixed(), left : rect.left.toFixed(), right : rect.right.toFixed(), top : rect.top.toFixed(), width : rect.width.toFixed() }; 
+            } """   
+            serverSide = fun (s : string) -> printfn "clientRect: %A" (ClientRect.ofString s); None
+        }
+
     let app =
         {
             initial = 0
             update = update 
             view = view
-            onRendered = fun _ _ -> """() => { 
-                var rect = document.getElementById("urdar").getBoundingClientRect();
-                return { bottom : rect.bottom, height : rect.height, left : rect.left, right : rect.right, top : rect.top, width : rect.width }; 
-            } """
+            onRendered = onRendered
         }
 
 
@@ -127,7 +133,7 @@ module ManyTestThings =
             initial = [ 1; 2; 3 ]
             update = update
             view = view
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
         }
     
 
@@ -142,7 +148,7 @@ let main argv =
             components = [ NumericApp.initial; NumericApp.initial; NumericApp.initial ]            
             }
 
-    let app = TrafoApp.app
+    let app = TestApp.app
     let runWindow = true        
 
     if runWindow then

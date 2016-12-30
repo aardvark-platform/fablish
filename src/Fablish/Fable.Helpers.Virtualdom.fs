@@ -641,7 +641,7 @@ module ReactDomRenderer =
                                 | EventHandler(ev,f) ->
                                     let! id, registrations = State.get
                                     let call = sprintf "function(ev) { send('%d',ev); }" id 
-                                    do! State.put (id+1, Map.add id f registrations)
+                                    do! State.put (id+1, Map.add id (Some << f) registrations)
                                     return sprintf "'%s' : %s" ev call |> Some
                         }
                     )
