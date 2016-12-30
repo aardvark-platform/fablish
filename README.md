@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/vrvis/fablish.svg?branch=master)](https://travis-ci.org/vrvis/fablish)
+[![Build status](https://ci.appveyor.com/api/projects/status/caihtu3i3697i6o2/branch/master?svg=true)](https://ci.appveyor.com/project/haraldsteinlechner/fablish/branch/master)
+
 # Fablish
 This library provides utilities for building Elm style [[1]] applications in .NET.
 In contrast to fable [[2]], which uses a F# to JS compiler, this library runs directly in your favorite CLR. 
