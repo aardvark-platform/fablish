@@ -1,8 +1,8 @@
 # Fablish
-This library provides utilities for building Elm style [1] applications in .NET.
-In contrast to fable [2], which uses a F# to JS compiler, this library runs directly in your favorite CLR. 
+This library provides utilities for building Elm style [[1]] applications in .NET.
+In contrast to fable [[2]], which uses a F# to JS compiler, this library runs directly in your favorite CLR. 
 However, in order to stay somewhat compatible we reused fable-archs API but replaced the virtualdom backend
-for technickal reasons with a custom codegenerator which creates the HTML dom via react [3].
+for technickal reasons with a custom codegenerator which creates the HTML dom via react [[3]].
 
 The overall architecture is as such:
 
@@ -82,7 +82,7 @@ https://github.com/vrvis/fablish/blob/master/docs/teaser.png
 
 ## Interactive Development
 
-fablish-hmr [4] provides webpack [5] style interactive programming by utilizing F# compiler services. A video shows off this feature: [6]
+fablish-hmr [[4]] provides webpack [[5]] style interactive programming by utilizing F# compiler services. A video shows off this feature: [youtube video on hmr](https://www.youtube.com/watch?v=if5Natbyx0s&feature=youtu.be)
 
 ## How to contribute 
 
