@@ -1,10 +1,18 @@
-# fablish
+# Fablish
 This library provides utilities for building Elm style [1] applications in .NET.
 In contrast to fable [2], which uses a F# to JS compiler, this library runs directly in your favorite CLR. 
 However, in order to stay somewhat compatible we reused fable-archs API but replaced the virtualdom backend
 for technickal reasons with a custom codegenerator which creates the HTML dom via react [3].
 
 The overall architecture is as such:
+
+## When to use
+
+fablish is useful if your use case looks like:
+ - you want purely functional user interfaces
+ - you want to profit from web technology and tooling
+ - you want solid technology for rendering your ui (browsers are superfast ;)
+ - you still want native .net programs since your application state cannot be run in the broser alone (e.g. you are rendering several GB of data?)
 
 ## Write Elm Style Application using similar API to fable:
 
@@ -40,8 +48,8 @@ module TestApp =
 
 ## Since by default we use chromium for rendering UIs, initialize chromium:
 ```F#
-    ChromiumUtilities.unpackCef()
-    Chromium.init argv
+ChromiumUtilities.unpackCef() // downloads CEF build if not already present
+Chromium.init argv            // initialized CEF runtime
 ```
 
 ## Run your app
@@ -63,7 +71,12 @@ Fablish.runLocally "8083" app
 
 In both cases your application can be debugged using chrome debugging tools:
 
-## Notes 
+## Building
+
+- run ``build.cmd`` or ``build.sh`` (F# and .net or mono needs to be installed)
+- you can also use the prebuilt package currently available here: https://vrvis.myget.org/feed/aardvark_public/package/nuget/Fablish
+
+## How to contribute 
 
 Note that this project is in very early stage of development. Still, help in building rich user interface libraries
 is welcome ;)
