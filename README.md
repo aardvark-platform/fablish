@@ -76,6 +76,14 @@ In both cases your application can be debugged using chrome debugging tools:
 - run ``build.cmd`` or ``build.sh`` (F# and .net or mono needs to be installed)
 - you can also use the prebuilt package currently available here: https://vrvis.myget.org/feed/aardvark_public/package/nuget/Fablish
 
+## Debugging
+https://github.com/vrvis/fablish/blob/master/docs/teaser.png
+![alt text](docs/teaser.png)
+
+## Interactive Development
+
+fablish-hmr [4] provides webpack [5] style interactive programming by utilizing F# compiler services. A video shows off this feature: [6]
+
 ## How to contribute 
 
 Note that this project is in very early stage of development. Still, help in building rich user interface libraries
@@ -86,3 +94,9 @@ is welcome ;)
  [2]: http://fable.io/fable-arch/
  
  [3]: https://facebook.github.io/react/
+ 
+ [4]: https://github.com/vrvis/fablish/tree/master/src/fablish-hmr
+ 
+ [5]: https://webpack.github.io/
+
+ [6]: https://www.youtube.com/watch?v=if5Natbyx0s&feature=youtu.be
