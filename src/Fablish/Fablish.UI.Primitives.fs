@@ -239,15 +239,12 @@ module ChoiceHelper =
         { choices = FSharpType.GetUnionCases typeof<'a> |> Array.map (fun a -> a.Name) |> Array.toList; selected = toString selected }
 
     let fromChoice<'a> (choice : Choice) : 'a Option = 
-        fromString choice.selected
-   
-
+        fromString choice.selected   
 
 module TEst = 
     type Test = Nil  | Cons
     let a = ChoiceHelper.toChoice (Cons )
     let b : Test Option = ChoiceHelper.fromChoice a
-
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Choice = 
@@ -287,10 +284,10 @@ module ToggleApp =
             | Toggle -> { model with active = not model.active }
 
     let view (model : Model) : DomNode<Action> =         
-        let active = if model.active then "ui checked toggle checkbox" else "ui toggle checkbox"
+        let active = if model.active then "ui defaultChecked toggle checkbox" else "ui toggle checkbox"
         let active' = if model.active then "checked" else ""
         div [clazz active] [
-            input [attribute "type" "checkbox"; attribute "checked" active'; onMouseClick(fun _ -> Toggle)]
+            input [attribute "type" "checkbox"; attribute "defaultChecked" active'; onMouseClick(fun _ -> Toggle)]
             label [] [text ""]
             
         ]
