@@ -5,7 +5,7 @@ However, in order to stay somewhat compatible we reused fable-archs API but repl
 for technickal reasons with a custom codegenerator which creates the HTML dom via react [[3]].
 
 The overall architecture is as such:
- - elm architecture similar to fable-arch
+ - elm architecture similar to fable-arch [[8]]
  - fable style API for building views
  - javascript code generator for building React DOM
  - websocket via suave [[7]] provides dom to static webpage
@@ -108,3 +108,5 @@ is welcome ;)
  [6]: https://www.youtube.com/watch?v=if5Natbyx0s&feature=youtu.be
 
  [7]: https://suave.io/
+
+ [8]: http://fable.io/fable-arch/
