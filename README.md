@@ -5,6 +5,12 @@ However, in order to stay somewhat compatible we reused fable-archs API but repl
 for technickal reasons with a custom codegenerator which creates the HTML dom via react [[3]].
 
 The overall architecture is as such:
+ - elm architecture similar to fable-arch
+ - fable style API for building views
+ - javascript code generator for building React DOM
+ - websocket via soave provides dom to static webpage
+ - the webpage utilizes websocket and react to update and render the DOM
+ - the overall application can be hosted in any browser or by using the battery included chromium window.
 
 ## When to use
 
