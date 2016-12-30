@@ -83,7 +83,7 @@ In both cases your application can be debugged using chrome debugging tools:
 - you can also use the prebuilt package currently available here: https://vrvis.myget.org/feed/aardvark_public/package/nuget/Fablish
 
 ## Debugging
-https://github.com/vrvis/fablish/blob/master/docs/teaser.png
+
 ![alt text](docs/teaser.png)
 
 ## Interactive Development
