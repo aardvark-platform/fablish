@@ -8,3 +8,4 @@ files
     ..\..\bin\Release\Fablish.pdb ==> lib\net45
 	..\..\libs\Suave.dll ==> lib\net45
 	..\..\libs\Suave.dll.config ==> lib\net45
+	static\index.html ==> lib\net45\static
