@@ -22,7 +22,7 @@ module HelloWorld =
 
     let view (m : Model) : DomNode<Action> =
         div [] [
-            text (sprintf "curre aaaant content: %d" m)
+            text (sprintf "current value: %d" m)
             br []
             button [onMouseClick (fun dontCare -> Inc)] [text "increment"]
             button [onMouseClick (fun dontCare -> Dec)] [text "decrement"]
@@ -33,7 +33,7 @@ module HelloWorld =
             initial = 0
             update = update 
             view = view
-            onRendered = Scripts.ignore
+            onRendered = OnRendered.ignore
         }
 
 let browser = Chromium.runControl "8083" HelloWorld.app
