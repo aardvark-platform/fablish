@@ -145,7 +145,7 @@ let main argv =
     let app = PerformanceTest.app
 
     let m : V3dApp.Model = {
-            components = [ NumericApp.initial; NumericApp.initial; NumericApp.initial ]            
+            components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
             }
 
     let app = TestApp.app

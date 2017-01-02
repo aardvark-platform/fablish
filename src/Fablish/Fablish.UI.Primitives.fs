@@ -28,15 +28,69 @@ module DomHelpers =
             div [clazz content] content'
         ]
 
-module NumericApp = 
+type Toggle = {
+    isActive : bool        
+}
+
+type Text = {
+    content : string
+}
+
+type Numeric = {
+    value : float
+    min   : float
+    max   : float
+    step  : float
+}
+
+type Choice = {     
+    choices     : list<string>
+    selected    : string
+}
+
+type Vector3d = {
+    x : Numeric
+    y : Numeric
+    z : Numeric
+}
+
+type Transformation = {
+    translation : Vector3d
+    rotation    : Vector3d
+    scale       : Vector3d
+}
+
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Text = 
+    type Model = Text
+
+    type Action = 
+        | Change of string
+
+    let update (model : Model) (action : Action) =
+        match action with
+            | Change x -> { model with content = x }
+
+    let view (model : Model) : DomNode<Action> =
+        div [clazz "ui input"] [
+            input [
+                Style ["text-align","right"]
+                attribute "value" model.content
+                attribute "type" "text"; //attribute "placeholder" "numeric";
+                attribute "size" "6"
+                onChange (fun s -> Change (unbox s))
+            ]
+    ]
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Numeric = 
     open Aardvark.Base
 
-    type Model = {
-        value : float
-        min   : float
-        max   : float
-        step  : float
-    }
+    let numeric f =
+        { value = f; min = Double.MinValue; max = Double.MaxValue; step = 0.1 }
+
+    type Model = Numeric
 
     type Action = 
         | Increment
@@ -44,10 +98,10 @@ module NumericApp =
         | Set of string
 
     let initial = {
-        value = 1.0
-        min = -1.0
-        max = 5.0
-        step = 0.5
+        value   = 1.0
+        min     = -1.0
+        max     = 5.0
+        step    = 0.5
     }
 
     let update (model : Model) (action : Action) =
@@ -85,143 +139,79 @@ module NumericApp =
         onRendered = OnRendered.ignore
     }
 
-module V3dApp = 
-    open DomHelpers    
-
-    type Model = {
-        components : list<NumericApp.Model>        
-    }   
-
-    type Action = Change of int * NumericApp.Action
-
-    let update (model : Model) (action : Action) =
-        match action with
-            | Change(index,action) -> 
-                { model with components = List.updateAt index (fun x -> NumericApp.update x action) model.components}    
-
-    let view (model : Model) : DomNode<Action> =
-        let numericViews = 
-            model.components |> List.mapi (fun i a -> NumericApp.view a |> Html.map (fun a -> Change(i, a)))
-              
-        div [] [
-            for n in numericViews do 
-                yield div [] [n]
-        ]
-
-    let app initial = {
-            initial = initial
-            view = view
-            update = update
-            onRendered = OnRendered.ignore
-    }
-
-module TrafoApp = 
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Vector3d =
     open DomHelpers
 
-    type Model = {
-        vectors : list<V3dApp.Model>
-    }
-
-    type Action = Change of int * V3dApp.Action
-
-    let initial = { vectors = List.init 3 (fun _ -> { components = List.init 3 (fun _ -> NumericApp.initial) })}
-
-    let update (model : Model) (action : Action) =
-        match action with
-            | Change(index, action) ->
-                { model with vectors = List.updateAt index (fun x -> V3dApp.update x action) model.vectors}
-
-    let view (model : Model) : DomNode<Action> =
-        let vectorViews =
-            model.vectors |> List.mapi ( fun i a -> V3dApp.view a |> Html.map (fun a -> Change(i,a)))
-
-        div[] [
-            for n in vectorViews do
-                yield div [] [n]
-        ]
-
-    let app = { initial = initial; view = view; update = update; onRendered = OnRendered.ignore }
-
-module V3dApp2 =
-    open DomHelpers
-
-    type Model = {
-        x : NumericApp.Model
-        y : NumericApp.Model
-        z : NumericApp.Model
-    }
+    type Model = Vector3d
 
     type Action = 
-        | Set_X   of NumericApp.Action
-        | Set_Y   of NumericApp.Action    
-        | Set_Z   of NumericApp.Action
+        | Set_X   of Numeric.Action
+        | Set_Y   of Numeric.Action    
+        | Set_Z   of Numeric.Action
 
     let update (model : Model) (action : Action) =
         match action with
-            | Set_X a -> { model with x = NumericApp.update model.x a }
-            | Set_Y a -> { model with y = NumericApp.update model.y a }
-            | Set_Z a -> { model with z = NumericApp.update model.z a }
+            | Set_X a -> { model with x = Numeric.update model.x a }
+            | Set_Y a -> { model with y = Numeric.update model.y a }
+            | Set_Z a -> { model with z = Numeric.update model.z a }
 
     let view (model : Model) : DomNode<Action> =
         table [clazz "ui celled table"] [
                     tbody [] [
                         tr [] [
                             td [clazz "collapsing"] [text "X:"];
-                            td [clazz "right aligned"] [NumericApp.view model.x |> Html.map Set_X]
+                            td [clazz "right aligned"] [Numeric.view model.x |> Html.map Set_X]
                         ]
                         tr [] [
                             td [clazz "collapsing"] [text "Y:"];
-                            td [clazz "right aligned"] [NumericApp.view model.y |> Html.map Set_Y]
+                            td [clazz "right aligned"] [Numeric.view model.y |> Html.map Set_Y]
                         ]
                         tr [] [
                             td [clazz "collapsing"] [text "Z:"];
-                            td [clazz "right aligned"] [NumericApp.view model.z |> Html.map Set_Z]
+                            td [clazz "right aligned"] [Numeric.view model.z |> Html.map Set_Z]
                         ]
                     ]
         ]
 
-module TrafoApp2 =
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Transformation =
     open DomHelpers
 
     type Model = {
-        translation : V3dApp2.Model
-        rotation    : V3dApp2.Model
-        scale       : V3dApp2.Model
+        translation : Vector3d.Model
+        rotation    : Vector3d.Model
+        scale       : Vector3d.Model
     }
 
     type Action = 
-        | Set_Translation   of V3dApp2.Action
-        | Set_Rotation      of V3dApp2.Action    
-        | Set_Scale         of V3dApp2.Action
+        | Set_Translation   of Vector3d.Action
+        | Set_Rotation      of Vector3d.Action    
+        | Set_Scale         of Vector3d.Action
 
     let update (model : Model) (action : Action) =
         match action with
-            | Set_Translation a -> { model with translation = V3dApp2.update model.translation a }
-            | Set_Rotation a -> { model with rotation = V3dApp2.update model.rotation a }
-            | Set_Scale a -> { model with scale = V3dApp2.update model.scale a }
+            | Set_Translation a -> { model with translation = Vector3d.update model.translation a }
+            | Set_Rotation a -> { model with rotation = Vector3d.update model.rotation a }
+            | Set_Scale a -> { model with scale = Vector3d.update model.scale a }
 
     let view (model : Model) : DomNode<Action> =
         table [clazz "ui celled table"] [
                     tbody [] [
                         tr [] [
                             td [clazz "collapsing"] [text "Translation:"];
-                            td [clazz "right aligned"] [V3dApp2.view model.translation |> Html.map Set_Translation]
+                            td [clazz "right aligned"] [Vector3d.view model.translation |> Html.map Set_Translation]
                         ]
                         tr [] [
                             td [clazz "collapsing"] [text "Rotation:"];
-                            td [clazz "right aligned"] [V3dApp2.view model.rotation |> Html.map Set_Rotation]
+                            td [clazz "right aligned"] [Vector3d.view model.rotation |> Html.map Set_Rotation]
                         ]
                         tr [] [
                             td [clazz "collapsing"] [text "Scale:"];
-                            td [clazz "right aligned"] [V3dApp2.view model.scale |> Html.map Set_Scale]
+                            td [clazz "right aligned"] [Vector3d.view model.scale |> Html.map Set_Scale]
                         ]
                     ]
         ]            
-
-type Choice = {     
-        choices     : list<string>
-        selected    : string
-    }
 
 module ChoiceHelper = 
     open System
@@ -240,11 +230,6 @@ module ChoiceHelper =
 
     let fromChoice<'a> (choice : Choice) : 'a Option = 
         fromString choice.selected   
-
-module TEst = 
-    type Test = Nil  | Cons
-    let a = ChoiceHelper.toChoice (Cons )
-    let b : Test Option = ChoiceHelper.fromChoice a
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Choice = 
@@ -270,42 +255,25 @@ module Choice =
             for case in model.choices do yield option [] [text (sprintf "%s" case)]
        ]  
 
-module ToggleApp = 
-    type Model = {
-        active : bool
-        label  : string
-    }
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Toggle = 
+    type Model = Toggle
 
     type Action = 
         | Toggle
     
     let update (model : Model) (action : Action) =
         match action with
-            | Toggle -> { model with active = not model.active }
+            | Toggle -> { model with isActive = not model.isActive }
 
     let view (model : Model) : DomNode<Action> =         
-        let active = if model.active then "ui defaultChecked toggle checkbox" else "ui toggle checkbox"
-        let active' = if model.active then "checked" else ""
+        let active = if model.isActive then "ui defaultChecked toggle checkbox" else "ui toggle checkbox"
+        let active' = if model.isActive then "checked" else ""
         div [clazz active] [
             input [attribute "type" "checkbox"; attribute "defaultChecked" active'; onMouseClick(fun _ -> Toggle)]
             label [] [text ""]
             
-        ]
-        //button ([clazz checked; onMouseClick (fun _ -> Toggle) ]) [text model.label]
-
-//        <div class="ui left floated compact segment">
-//  <div class="ui fitted toggle checkbox">
-//    <input type="checkbox">
-//    <label></label>
-//  </div>
-//</div>
-
-    let app initial = {
-            initial = initial
-            view = view
-            update = update
-            onRendered = OnRendered.ignore
-    }
+        ]        
 
 module ValueApp = 
     open DomHelpers
@@ -313,7 +281,7 @@ module ValueApp =
     type Value = 
         | TextInput of string
         | ComboBox of Choice.Model
-        | NumericInput of NumericApp.Model
+        | NumericInput of Numeric.Model
         //add toggleapp as boolean input
         //add vector app
 
@@ -325,13 +293,13 @@ module ValueApp =
     type Action =
         | TextChange of string
         | ComboChange of Choice.Action
-        | NumericChange of NumericApp.Action
+        | NumericChange of Numeric.Action
 
     let update model action =
         match action, model.value with
             | TextChange a, TextInput _ -> { model with value = TextInput a }
             | ComboChange a, ComboBox m -> { model with value = ComboBox <| Choice.update m a }
-            | NumericChange a, NumericInput m -> { model with value = NumericInput <| NumericApp.update m a }
+            | NumericChange a, NumericInput m -> { model with value = NumericInput <| Numeric.update m a }
             | _ -> failwith "property not supported"    
 
     let view (model : Model) : DomNode<Action> =
@@ -340,6 +308,62 @@ module ValueApp =
                     | TextInput a -> 
                         yield input [clazz "ui input"; attribute "value" a; onChange (fun v -> v |> unbox |> TextChange)]
                     | ComboBox a -> yield Choice.view a |> Html.map ComboChange
-                    | NumericInput a -> yield NumericApp.view a |> Html.map NumericChange
+                    | NumericInput a -> yield Numeric.view a |> Html.map NumericChange
                 ]
 
+module V3dApp = 
+    open DomHelpers    
+
+    type Model = {
+        components : list<Numeric.Model>        
+    }   
+
+    type Action = Change of int * Numeric.Action
+
+    let update (model : Model) (action : Action) =
+        match action with
+            | Change(index,action) -> 
+                { model with components = List.updateAt index (fun x -> Numeric.update x action) model.components}    
+
+    let view (model : Model) : DomNode<Action> =
+        let numericViews = 
+            model.components |> List.mapi (fun i a -> Numeric.view a |> Html.map (fun a -> Change(i, a)))
+              
+        div [] [
+            for n in numericViews do 
+                yield div [] [n]
+        ]
+
+    let app initial = {
+            initial = initial
+            view = view
+            update = update
+            onRendered = OnRendered.ignore
+    }
+
+module TrafoApp = 
+    open DomHelpers
+
+    type Model = {
+        vectors : list<V3dApp.Model>
+    }
+
+    type Action = Change of int * V3dApp.Action
+
+    let initial = { vectors = List.init 3 (fun _ -> { components = List.init 3 (fun _ -> Numeric.initial) })}
+
+    let update (model : Model) (action : Action) =
+        match action with
+            | Change(index, action) ->
+                { model with vectors = List.updateAt index (fun x -> V3dApp.update x action) model.vectors}
+
+    let view (model : Model) : DomNode<Action> =
+        let vectorViews =
+            model.vectors |> List.mapi ( fun i a -> V3dApp.view a |> Html.map (fun a -> Change(i,a)))
+
+        div[] [
+            for n in vectorViews do
+                yield div [] [n]
+        ]
+
+    let app = { initial = initial; view = view; update = update; onRendered = OnRendered.ignore }
