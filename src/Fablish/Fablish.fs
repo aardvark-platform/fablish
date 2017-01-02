@@ -213,14 +213,23 @@ module Fablish =
                     | _ -> return! failwith "initial handshake failed (should have received text)"
             }           
 
+    let readDefaultIndex mainPage = 
+        let c = Console.BackgroundColor
+        Console.ForegroundColor <- ConsoleColor.Green
+        printfn "[fablish] trying to serve: %s but the file could not be found in the home directory (typically ./static/index.html). Trying to use default index.html from fablish build (using embedded resource)." mainPage
+        let info = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("index.html")
+        use s = new System.IO.StreamReader(info)
+        Console.ForegroundColor <- c
+        s.ReadToEnd()
 
     let runPlain app : WebPart =
         path "/ws" >=> handShake (runConnection app)
 
+
     let runApp (mainPage : string) (app : App<_,_,_>) : WebPart =
         choose [
             runPlain app
-            GET >=> choose [ path "/mainPage" >=> file mainPage; browseHome ];
+            GET >=> choose [ path "/mainPage" >=> file mainPage;  path "/mainPage" >=> OK (readDefaultIndex mainPage); browseHome ];
             GET >=> path "/image" >=> 
             NOT_FOUND "Found no handlers."
         ]

@@ -95,12 +95,12 @@ module ChromiumUtilities =
             if installedVersion = version then 
                 printfn "[install] cef (%s) found beside current executable. skipping installation." version
             else
-                Console.ForegroundColor <- ConsoleColor.DarkRed
+                Console.ForegroundColor <- ConsoleColor.Red
                 printfn "[install] Cef version %s was found beside your executable but this application demands for %s" installedVersion version
                 printfn "[install] I will automatically fetch the correct version and install it besides your application..." 
                 install ()
         else 
-            Console.ForegroundColor <- ConsoleColor.DarkRed
+            Console.ForegroundColor <- ConsoleColor.Green
             printfn "[install] No cef build was found besides your application... "
             printfn "[install] I will automatically fetch the correct version(%s) and install it besides your application..." version
             install ()
