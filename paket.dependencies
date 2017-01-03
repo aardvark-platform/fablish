@@ -6,8 +6,8 @@ nuget Aardvark.Base.FSharp ~> 2.4.5
 nuget FsPickler                            ~> 3.2.0
 nuget FsPickler.Json                       ~> 3.2.0
 
-nuget Another.Unofficial.Xilium.CefGlue              = 0.0.7
-nuget Another.Unofficial.Xilium.CefGlue.WindowsForms = 0.0.7
+nuget Another.Unofficial.Xilium.CefGlue              = 0.0.9
+nuget Another.Unofficial.Xilium.CefGlue.WindowsForms = 0.0.9
 
 nuget SharpZipLib  ~> 0.86.0
 nuget Mono.Cecil   ~> 0.9.6.4

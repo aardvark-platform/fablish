@@ -8,9 +8,9 @@ NUGET
       DevILSharp (>= 0.0.11 < 0.1.0)
   remote: http://api.nuget.org/v3/index.json
   specs:
-    Another.Unofficial.Xilium.CefGlue (0.0.7)
-    Another.Unofficial.Xilium.CefGlue.WindowsForms (0.0.7)
-      Another.Unofficial.Xilium.CefGlue (0.0.7)
+    Another.Unofficial.Xilium.CefGlue (0.0.9)
+    Another.Unofficial.Xilium.CefGlue.WindowsForms (0.0.9)
+      Another.Unofficial.Xilium.CefGlue (0.0.9)
     DevILSharp (0.0.13)
     FSharp.Compiler.Service (8.0)
       System.Collections.Immutable (>= 1.2.0)
