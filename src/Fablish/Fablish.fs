@@ -242,7 +242,10 @@ module Fablish =
 `--'   `--' `--'`------' `-----'`--'`-----' `--'  `--'"""
 
     let serve address port app =
+        let c = Console.ForegroundColor
+        Console.ForegroundColor <- ConsoleColor.Green
         printfn "%s" logo
+        Console.ForegroundColor <- c
         let path = "static/index.html"
 
         let config =
