@@ -137,6 +137,94 @@ module ManyTestThings =
         }
 
 
+module FileApp =
+    
+    type Model = list<string>
+
+    type Message = Open | Accept | Deny 
+
+    let update (m : Model) (msg : Message) =
+        match msg with
+            | Open -> 
+                use dialog = new System.Windows.Forms.OpenFileDialog()
+                dialog.Multiselect <- true
+                let r = dialog.ShowDialog()
+                if r = DialogResult.OK then                    
+                    (dialog.FileNames |> Array.toList) @ m
+                else m
+            | Accept -> m
+            | Deny -> []
+
+    let openModalButton =
+        div [] [
+            
+            button [Callback( "onClick", "doit();")] [text "JD"]
+        ]
+    
+    let modal (m) =
+        div [clazz "ui modal"] [
+            i [clazz "close icon"] []
+            div [clazz "header"] [text "Modal Title"]
+            div[clazz "image content"] [
+                div [clazz "image"][text "image here"]
+                div [clazz "description"][button [clazz "ui button"; onMouseClick (fun _ -> Open)][text "add files"]]
+                div [][
+                    for i in m do
+                        yield sprintf "file: %s" i |> text
+                ]
+            ]
+            div [clazz "actions"] [
+                div [clazz "ui button deny"; onMouseClick (fun _ -> Deny)] [text "nope"]
+                div [clazz "ui button positive"; onMouseClick (fun _ -> Accept)] [text "yes"]
+            ]
+        ]
+
+    let view (m : Model) =
+        div [] [
+            yield modal m
+            yield openModalButton           
+        ]
+
+
+    let app =
+        {
+            initial = []
+            update = update
+            view = view
+            onRendered = OnRendered.ignore
+        }
+
+module Surfaces =
+    
+    type Model = 
+        {
+            currentlyLoaded : list<string>
+            importer : FileApp.Model
+        }
+    type Msg = Import of list<string> | FileAppMsg of FileApp.Message
+
+    let update model msg =
+        match msg with
+            | Import imported -> 
+                { importer = []; currentlyLoaded = model.currentlyLoaded @ imported }
+            | FileAppMsg a -> { model with importer = FileApp.update model.importer a }
+            | _ -> model
+
+    let view m =
+        div [] [
+            yield FileApp.view m.importer |> Html.map (fun a -> match a with | FileApp.Accept _ -> Import m.importer | a -> FileAppMsg a)
+            for a in m.currentlyLoaded do yield text (sprintf "loaded: %s" a)
+        ]
+
+
+    let app =
+        {
+            initial = { currentlyLoaded = []; importer = [] }
+            update = update
+            view = view
+            onRendered = OnRendered.ignore
+        }
+
 [<EntryPoint;STAThread>]
 let main argv =
     ChromiumUtilities.unpackCef()
@@ -148,7 +236,7 @@ let main argv =
             components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
             }
 
-    let app = TestApp.app
+    let app = Surfaces.app
     let runWindow = true        
 
     if runWindow then

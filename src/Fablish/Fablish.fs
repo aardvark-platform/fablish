@@ -162,7 +162,7 @@ module Fablish =
                                                     | _ -> 
                                                         return NoMessage 
                                             | None -> 
-                                                printfn "[fablish] dont understand event. id was: %A" eventId
+                                                printfn "[fablish] dont understand event. id was: %A and content was: %A" eventId eventValue
                                                 return NoMessage
                             | Choice1Of2 { id = id; data = _ } when id = forceRendering -> 
                                 return ForceRendering

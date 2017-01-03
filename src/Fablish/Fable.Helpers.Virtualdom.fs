@@ -637,7 +637,7 @@ module ReactDomRenderer =
                                 | Style s ->       return sprintf "style : {%s}" (mkKvps s) |> Some
                                 | Property(k,v) -> return sprintf "'%s' : '%s'" k v |> Some
                                 | Callback(ev, f) -> 
-                                    return sprintf "'%s' :'%s'" ev f |> Some 
+                                    return sprintf "'%s' : function(ev) { %s }" ev f |> Some 
                                 | EventHandler(ev,f) ->
                                     let! id, registrations = State.get
                                     let call = sprintf "function(ev) { send('%d',ev); }" id 
