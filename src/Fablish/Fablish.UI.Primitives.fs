@@ -75,10 +75,10 @@ module Text =
     let view (model : Model) : DomNode<Action> =
         div [clazz "ui input"] [
             input [
-                Style ["text-align","right"]
+                //Style ["text-align","right"]
                 attribute "value" model.content
                 attribute "type" "text"; //attribute "placeholder" "numeric";
-                attribute "size" "6"
+                //attribute "size" "6"
                 onChange (fun s -> Change (unbox s))
             ]
     ]
