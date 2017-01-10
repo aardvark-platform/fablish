@@ -66,7 +66,9 @@
   <ItemGroup>
     <Compile Include="Fable.Helpers.Virtualdom.fs" />
     <Compile Include="NativeDependencyUtilities.fs" />
+    <Compile Include="Types.fs" />
     <Compile Include="Utils.fs" />
+    <Compile Include="Fablish2.fs" />
     <Compile Include="Fablish.fs" />
     <Compile Include="Fablish.UI.Primitives.fs" />
     <Compile Include="Fablish.UI.ImageGallery.fs" />

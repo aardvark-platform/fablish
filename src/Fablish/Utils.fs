@@ -20,7 +20,6 @@ module Utils =
             if t0 <> t1 then
                 failwith "[CEF] could not initialize picklers"
 
-
     module List =
         let rec updateAt (i : int) (f : 'a -> 'a) (xs : list<'a>) = 
             match xs with
@@ -28,6 +27,30 @@ module Utils =
                     if i = 0 then (f x) :: xs
                     else x :: (updateAt (i-1) f xs)
                 | [] -> []
+
+    [<AutoOpen>]
+    module Ids =
+        open System.Threading
+
+        type Id = int
+        type ID() =
+            let mutable currentId = 0
+            member x.New () =
+                Interlocked.Increment(&currentId)
+            member x.All = [ 0 .. currentId ]
+
+module EmbeddedResources =
+    
+    open System
+
+    let extractPage page = 
+        let c = Console.BackgroundColor
+        Console.ForegroundColor <- ConsoleColor.Green
+        printfn "[fablish] trying to serve: %s but the file could not be found in the home directory (typically ./static/index.html). Trying to use default index.html from fablish build (using embedded resource)." page
+        let info = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream page
+        use s = new System.IO.StreamReader(info)
+        Console.ForegroundColor <- c
+        s.ReadToEnd()
 
 module AsyncExtensions = 
 

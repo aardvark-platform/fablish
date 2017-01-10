@@ -1,7 +1,7 @@
 ﻿namespace Fablish
 
 open System
-
+open System.Threading
 
 open Suave
 open Suave.Http
@@ -21,38 +21,6 @@ open Suave.Sockets.Control
 open Suave.WebSocket
 
 open System.Text
-
-type Script = string
-
-module Scripts =
-    let ignore = "() => { return {}; }"
-
-type RenderCallback<'msg> = string -> Option<'msg>
-type Reaction<'msg> = { clientSide : Script; serverSide : RenderCallback<'msg>}
-type OnRendered<'model,'msg,'view> = 'model -> 'view -> Reaction<'msg>
-
-module OnRendered =
-    let ignore : 'model -> 'view -> Reaction<'msg> = fun _ _ -> { clientSide = Scripts.ignore; serverSide = fun _ -> None }
-
-type App<'model,'msg,'view> = 
-    {
-        // Elm interface
-        initial  : 'model
-        update   : 'model -> 'msg -> 'model
-        view     : 'model -> 'view
-
-        // IO extensions
-        onRendered : OnRendered<'model,'msg,'view>
-    }
-
-
-open System.Threading
-type Id = int
-type ID() =
-    let mutable currentId = 0
-    member x.New () =
-        Interlocked.Increment(&currentId)
-    member x.All = [ 0 .. currentId ]
 
 [<AutoOpen>]
 module JavascriptInterop = 
@@ -104,10 +72,6 @@ module Fablish =
     let eventOccurance  = 1
     [<Literal>]
     let forceRendering = 2
-
-    type Event = { eventId : string; eventValue : string }
-    type Message = { id : int; data : Event }
-    type RenderRequest = { dom : string; script : Script; id : string }
    
     type Result<'msg> = NoMessage | Message of 'msg | Termination | ForceRendering
 
@@ -213,14 +177,6 @@ module Fablish =
                     | _ -> return! failwith "initial handshake failed (should have received text)"
             }           
 
-    let readDefaultIndex mainPage = 
-        let c = Console.BackgroundColor
-        Console.ForegroundColor <- ConsoleColor.Green
-        printfn "[fablish] trying to serve: %s but the file could not be found in the home directory (typically ./static/index.html). Trying to use default index.html from fablish build (using embedded resource)." mainPage
-        let info = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("index.html")
-        use s = new System.IO.StreamReader(info)
-        Console.ForegroundColor <- c
-        s.ReadToEnd()
 
     let runPlain app : WebPart =
         path "/ws" >=> handShake (runConnection app)
@@ -229,7 +185,7 @@ module Fablish =
     let runApp (mainPage : string) (app : App<_,_,_>) : WebPart =
         choose [
             runPlain app
-            GET >=> choose [ path "/mainPage" >=> file mainPage;  path "/mainPage" >=> OK (readDefaultIndex mainPage); browseHome ];
+            GET >=> choose [ path "/mainPage" >=> file mainPage;  path "/mainPage" >=> OK (EmbeddedResources.extractPage "index.html"); browseHome ];
             GET >=> path "/image" >=> 
             NOT_FOUND "Found no handlers."
         ]
