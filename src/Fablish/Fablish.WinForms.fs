@@ -69,7 +69,7 @@ module Chromium =
     let runControl (port : string) (app : App<'model,'msg, DomNode<'msg>>) =
        // if not initialized then failwith "run Chromium.init argv before running a control."
 
-        let url,t,ct = Fablish.serveLocally port app
+        let url,t,ct,app = Fablish2.serveLocally port app
 
         let cleanup _ =
             printfn "[fablish] closing -> shutting down."; 

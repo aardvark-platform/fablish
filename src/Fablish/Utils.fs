@@ -65,15 +65,20 @@ module Utils =
 module EmbeddedResources =
     
     open System
+    open System.IO
 
     let extractPage page = 
+        let plainName = Path.GetFileName page
         let c = Console.BackgroundColor
         Console.ForegroundColor <- ConsoleColor.Green
-        printfn "[fablish] trying to serve: %s but the file could not be found in the home directory (typically ./static/index.html). Trying to use default index.html from fablish build (using embedded resource)." page
-        let info = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream page
-        use s = new System.IO.StreamReader(info)
-        Console.ForegroundColor <- c
-        s.ReadToEnd()
+        printfn "[fablish] trying to serve: %s but the file could not be found in the home directory (typically ./static/index.html). Trying to use default index.html from fablish build (using embedded resource)." plainName
+        let info = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream plainName
+        if isNull info then
+            failwithf "[fablish] extractPage could not extract embedded resource of name: %s" plainName
+        else
+            use s = new System.IO.StreamReader(info)
+            Console.ForegroundColor <- c
+            s.ReadToEnd()
 
 [<AutoOpen>]
 module AsyncExtensions = 

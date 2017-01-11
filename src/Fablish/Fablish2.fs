@@ -56,12 +56,14 @@ module Fablish2 =
         member x.AddViewer m =
             lock viewers (fun _ -> 
                 viewers.Add m |> ignore
+                m.Put model.Value
             )
         member x.EmitMessage msg =
             lock viewers (fun _ -> 
-                model.Value <- update model.Value msg
+                let newModel = update model.Value msg
+                model.Value <- newModel
                 for v in viewers do
-                    MVar.put v m
+                    MVar.put v newModel
             )
         member x.UnsafeCurrentModel = model.Value
 
@@ -195,7 +197,7 @@ module Fablish2 =
 |  .---'/  O  \ |  |) /_ |  |   |  |'   .-' |  '--'  | 
 |  `--,|  .-.  ||  .-.  \|  |   |  |`.  `-. |  .--.  | 
 |  |`  |  | |  ||  '--' /|  '--.|  |.-'    ||  |  |  | 
-`--'   `--' `--'`------' `-----'`--'`-----' `--'  `--'"""
+`--'   `--' `--'`------' `-----'`--'`-----' `--'  `--' 2.0"""
 
     let serve address port app =
         let c = Console.ForegroundColor

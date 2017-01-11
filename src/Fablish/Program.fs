@@ -80,11 +80,13 @@ module TestApp =
     type Action = Inc | Dec
 
     let update (m : Model) (a : Action) =
+        printfn "[Test] computing udpate"
         match a with
             | Inc -> m + 1
             | Dec -> m - 1
 
     let view (m : Model) : DomNode<Action> =
+        printfn "[Test] Computing view"
         div [] [
             text (sprintf "current content: %d" m)
             br []
@@ -208,7 +210,6 @@ module Surfaces =
             | Import imported -> 
                 { importer = []; currentlyLoaded = model.currentlyLoaded @ imported }
             | FileAppMsg a -> { model with importer = FileApp.update model.importer a }
-            | _ -> model
 
     let view m =
         div [] [
@@ -240,7 +241,7 @@ let main argv =
     let runWindow = true        
 
     if runWindow then
-        let browser = Chromium.runControl "8083" app
+        let browser = Chromium.runControl "8083" TestApp.app
         use w = new Form()
         w.Controls.Add browser
         w.Width <- 800
