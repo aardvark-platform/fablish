@@ -9,10 +9,12 @@ module Tokens =
     [<Literal>]
     let forceRendering = 2
 
-type Script = string
+type Script = 
+    | JsLambda of string
+    | Ignore
 
 module Scripts =
-    let ignore = "() => { return {}; }"
+    let ignore = Ignore
 
 type RenderCallback<'msg> = string -> Option<'msg>
 type Reaction<'msg> = { clientSide : Script; serverSide : RenderCallback<'msg>}
@@ -35,6 +37,6 @@ type App<'model,'msg,'view> =
 
 type Event = { eventId : string; eventValue : string }
 type Message = { id : int; data : Event }
-type RenderRequest = { dom : string; script : Script; id : string }
+type RenderRequest = { dom : string; script : string; id : string }
 
 type Registrations<'msg> = Map<int,(obj->'msg)>

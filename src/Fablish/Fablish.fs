@@ -84,7 +84,13 @@ module Fablish =
 
                 let reaction = app.onRendered model view
                 let onRenderedEvt = s + 1
-                let bytes = { dom = vdom; script = reaction.clientSide; id = string onRenderedEvt } |> Pickler.json.Pickle 
+                
+                let script =
+                    match reaction.clientSide with
+                        | JsLambda s -> s
+                        | Ignore -> ""
+
+                let bytes = { dom = vdom; script = script; id = string onRenderedEvt } |> Pickler.json.Pickle 
 
                 printfn "[fablish] writing %f kb to client" (float bytes.Length / 1024.0)
                 do! webSocket.send Opcode.Text bytes true

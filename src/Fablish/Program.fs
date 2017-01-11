@@ -96,7 +96,7 @@ module TestApp =
 
     let onRendered model view =
         {
-            clientSide = """() => { 
+            clientSide = JsLambda """() => { 
                 var rect = document.getElementById("urdar").getBoundingClientRect();
                 return { bottom : rect.bottom.toFixed(), height : rect.height.toFixed(), left : rect.left.toFixed(), right : rect.right.toFixed(), top : rect.top.toFixed(), width : rect.width.toFixed() }; 
             } """   
@@ -108,7 +108,7 @@ module TestApp =
             initial = 0
             update = update 
             view = view
-            onRendered = onRendered
+            onRendered = onRendered //OnRendered.ignore
         }
 
 
