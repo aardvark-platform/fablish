@@ -46,15 +46,6 @@ module Fablish =
 
     open Aardvark.Base.Monads.State
 
-    let getBytes (s : String)  = 
-        Encoding.UTF8.GetBytes s
-
-    let getByteSegment (s : String)  = 
-        ByteSegment(Encoding.UTF8.GetBytes s)
-
-    let getString (b : byte[]) = Encoding.UTF8.GetString b
-        
-
     let render v = 
         let topLevelWrapped = div [] [v] // some libs such as react do crazy shit with top level element
         let (s,r),dom = State.run (0, Map.empty) (Fable.Helpers.Virtualdom.ReactDomRenderer.render ignore topLevelWrapped)
@@ -65,13 +56,6 @@ module Fablish =
         match Int32.TryParse(s) with
             | (true,v) -> Some v
             | _ -> None
-
-    let magic = "This is Aardvark"
-
-    [<Literal>]
-    let eventOccurance  = 1
-    [<Literal>]
-    let forceRendering = 2
    
     type Result<'msg> = NoMessage | Message of 'msg | Termination | ForceRendering
 

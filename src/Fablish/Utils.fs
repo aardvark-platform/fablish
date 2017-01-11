@@ -39,6 +39,29 @@ module Utils =
                 Interlocked.Increment(&currentId)
             member x.All = [ 0 .. currentId ]
 
+    [<AutoOpen>]
+    module NetExtensions =
+        open System
+        open System.Text
+        open System.Net
+        open Suave.Sockets
+        open Suave.Sockets.Control
+
+        let getBytes (s : String)  = 
+            Encoding.UTF8.GetBytes s
+
+        let getByteSegment (s : String)  = 
+            ByteSegment(Encoding.UTF8.GetBytes s)
+
+        let getString (b : byte[]) = Encoding.UTF8.GetString b
+
+        type SocketMonad with
+            member this.Bind(x : Async<'a>, f : 'a -> SocketOp<'b>) : SocketOp<'b> = 
+                async {
+                    let! result = x
+                    return! f result
+                }
+
 module EmbeddedResources =
     
     open System
@@ -52,6 +75,7 @@ module EmbeddedResources =
         Console.ForegroundColor <- c
         s.ReadToEnd()
 
+[<AutoOpen>]
 module AsyncExtensions = 
 
     open System
@@ -89,3 +113,8 @@ module AsyncExtensions =
                     for task in tasks do
                         ignore <| Task.Factory.StartNew(fun () -> Async.StartWithContinuations(task, scont, econt, ccont, innerCts.Token))
         }
+
+        static member Choice2(a : Async<'a>, b : Async<'b>) : Async<Option<Choice<'a,'b>>> =   
+            let a' = async { let! a = a in return Some (Choice1Of2 a) }
+            let b' = async { let! b= b in  return Some (Choice2Of2 b) }
+            Async.Choice [| a'; b' |]
