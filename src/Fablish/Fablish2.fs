@@ -87,7 +87,7 @@ module Fablish2 =
 
         member x.UnsafeCurrentModel = model.Value
 
-    let runView (runningApp : RunningApp<_,_>) app (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
+    let runView (runningApp : RunningApp<_,_>) (onMessage : 'msg -> unit) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
 
         let writeString (s : string) =
             socket {
@@ -120,7 +120,7 @@ module Fablish2 =
 
                 printfn "[fablish] writing %f kb to client" (float bytes.Length / 1024.0)
                 do! webSocket.send Opcode.Text bytes true
-                currentRegistrations <- Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) currentRegistrations
+                currentRegistrations <- Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) registrations
             }
 
 
@@ -183,6 +183,7 @@ module Fablish2 =
 
         and runElmLoop (mvar : MVar<'model>) (runningApp : RunningApp<'model,'msg>) =
             socket {
+                let! _ = SocketOp.ofAsync <| Async.SwitchToThreadPool()
                 let initialModel = MVar.take mvar
                 let! registrations = send initialModel
                 return! receive runningApp
@@ -197,6 +198,7 @@ module Fablish2 =
                         if s =  magic then
                             let mvar = MVar.empty()
                             runningApp.AddViewer mvar
+                            Async.Start <| (runOuterChanges mvar runningApp |> Async.Ignore)
                             return! runElmLoop mvar runningApp
                         else 
                             return failwithf "initial handshake failed. Web should have said: %s" magic
@@ -204,12 +206,12 @@ module Fablish2 =
             }
 
 
-    let runPlain runningApp app : WebPart =
-        path "/ws" >=> handShake (runView runningApp app)
+    let runPlain runningApp onMessage app : WebPart =
+        path "/ws" >=> handShake (runView runningApp onMessage app)
 
-    let runApp mainPage runningApp app : WebPart =
+    let runApp mainPage runningApp onMessage app : WebPart =
         choose [
-            runPlain runningApp app
+            runPlain runningApp onMessage app
             GET >=> choose [ 
                 path "/mainPage" >=> file mainPage
                 path "/mainPage" >=> OK (EmbeddedResources.extractPage mainPage)
@@ -238,9 +240,11 @@ module Fablish2 =
           }
 
         let runningApp = RunningApp<_,_>(app.initial, app.update)
+
+        let onMessage msg = runningApp.EmitMessage msg
         
         let cts = new CancellationTokenSource()
-        let listening,server = startWebServerAsync defaultConfig (runApp path runningApp app)
+        let listening,server = startWebServerAsync defaultConfig (runApp path runningApp onMessage app)
         
         let urla = if IPAddress.IsLoopback address then "localhost" else sprintf "%A" address
         
