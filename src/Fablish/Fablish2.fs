@@ -29,6 +29,8 @@ module Fablish2 =
 
     open Aardvark.Base.Monads.State
 
+    type Callback<'msg> = 'msg -> ('msg -> unit) -> unit
+
     let render v = 
         let topLevelWrapped = div [] [v] // some libs such as react do crazy shit with top level element
         let (s,r),dom = State.run (0, Map.empty) (Fable.Helpers.Virtualdom.ReactDomRenderer.render ignore topLevelWrapped)
@@ -87,7 +89,7 @@ module Fablish2 =
 
         member x.UnsafeCurrentModel = model.Value
 
-    let runView (runningApp : RunningApp<_,_>) (onMessage : 'msg -> unit) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
+    let runView (runningApp : RunningApp<_,_>) (onMessage : Callback<'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
 
         let writeString (s : string) =
             socket {
@@ -165,25 +167,24 @@ module Fablish2 =
                 match result with
                     | Termination -> ()
                     | Message msg -> 
-                        runningApp.EmitMessage msg
+                        onMessage msg runningApp.EmitMessage 
                         return! receive runningApp
                     | NoMessage -> 
                         return! receive runningApp
                     | ForceRendering -> 
-                        let! _ = send runningApp.UnsafeCurrentModel
+                        let! _ = lock lockObj (fun _ -> send runningApp.UnsafeCurrentModel)
                         return! receive runningApp
             }
 
         and runOuterChanges (mvar : MVar<'model>) (runningApp : RunningApp<_,_>) =
             socket {
                 let! model = SocketOp.ofAsync <| MVar.takeAsync mvar 
-                let! _ = send model
+                let! _ = lock lockObj (fun _ -> send model)
                 return! runOuterChanges mvar runningApp
             }
 
         and runElmLoop (mvar : MVar<'model>) (runningApp : RunningApp<'model,'msg>) =
             socket {
-                let! _ = SocketOp.ofAsync <| Async.SwitchToThreadPool()
                 let initialModel = MVar.take mvar
                 let! registrations = send initialModel
                 return! receive runningApp
@@ -191,6 +192,7 @@ module Fablish2 =
 
         fun ctx -> 
             socket {
+                let! ct = Async.CancellationToken
                 let! msg = webSocket.read()
                 match msg with
                     | (Opcode.Text,data,true) -> 
@@ -198,7 +200,8 @@ module Fablish2 =
                         if s =  magic then
                             let mvar = MVar.empty()
                             runningApp.AddViewer mvar
-                            Async.Start <| (runOuterChanges mvar runningApp |> Async.Ignore)
+                            let t = runOuterChanges mvar runningApp |> Async.Ignore
+                            Async.Start(t,ct)
                             return! runElmLoop mvar runningApp
                         else 
                             return failwithf "initial handshake failed. Web should have said: %s" magic
@@ -227,7 +230,20 @@ module Fablish2 =
 |  |`  |  | |  ||  '--' /|  '--.|  |.-'    ||  |  |  | 
 `--'   `--' `--'`------' `-----'`--'`-----' `--'  `--' 2.0"""
 
-    let serve address port app =
+//
+//    type Elmish<'model,'msg> = {
+//        update  : 'model -> 'msg -> 'model
+//        view    : 'model -> rapp<'msg> 
+//    }
+
+    type FablishResult<'model,'msg> = {
+        url : string
+        runningTask : Tasks.Task<unit>
+        runningApp  : RunningApp<'model,'msg>
+        shutdown    : System.Threading.CancellationTokenSource
+    }
+
+    let serve (address : IPAddress) (port : string) (onMessage : Option<Callback<'msg>>) (app : App<_,_,_>) =
         let c = Console.ForegroundColor
         Console.ForegroundColor <- ConsoleColor.Green
         printfn "%s" logo
@@ -241,7 +257,12 @@ module Fablish2 =
 
         let runningApp = RunningApp<_,_>(app.initial, app.update)
 
-        let onMessage msg = runningApp.EmitMessage msg
+        let self msg send = send msg
+
+        let onMessage = 
+            match onMessage with
+                | Some m -> m
+                | None -> self
         
         let cts = new CancellationTokenSource()
         let listening,server = startWebServerAsync defaultConfig (runApp path runningApp onMessage app)
@@ -250,11 +271,16 @@ module Fablish2 =
         
         let t = Async.StartAsTask(server,cancellationToken = cts.Token)
         listening |> Async.RunSynchronously |> printfn "[Fablish-suave] start stats: %A"
-        sprintf "http://%s:%s/mainPage" urla port, t, cts, runningApp
+        {
+             url =  sprintf "http://%s:%s/mainPage" urla port
+             runningTask = t
+             runningApp =runningApp
+             shutdown  = cts
+        }
 
     let serveLocally port app = serve IPAddress.Loopback port app
 
     let runLocally port app =
-        let url, task, cancel, app = serveLocally port app
-        task.Wait()
+        let result = serveLocally port None app
+        result.runningTask.Wait()
         app
