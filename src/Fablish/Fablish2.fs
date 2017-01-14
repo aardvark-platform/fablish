@@ -51,6 +51,8 @@ module Fablish2 =
 
     type RunningApp<'model,'msg>(m : 'model, update : 'model -> 'msg -> 'model) =
         let viewers = HashSet<MVar<'model>>()
+        let modelSubscriptions = Dictionary<_,_>()
+        let messageSubscriptions = Dictionary<_,_>()
         let model = Mod.init m
 
         member x.AddViewer m =
@@ -62,9 +64,27 @@ module Fablish2 =
             lock viewers (fun _ -> 
                 let newModel = update model.Value msg
                 model.Value <- newModel
+                for sub in messageSubscriptions.Values do
+                    sub msg
+
                 for v in viewers do
                     MVar.put v newModel
             )
+
+        member x.SubscribeModel(f : 'model -> unit) =
+            let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> modelSubscriptions.Remove x |> ignore) }
+            lock viewers (fun _ -> 
+                modelSubscriptions.Add(d,f) |> ignore
+            )
+            d
+
+        member x.SubscribeMessage(f : 'msg -> unit) =
+            let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> messageSubscriptions.Remove x |> ignore) }
+            lock viewers (fun _ -> 
+                messageSubscriptions.Add(d,f) |> ignore
+            )
+            d
+
         member x.UnsafeCurrentModel = model.Value
 
     let runView (runningApp : RunningApp<_,_>) app (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
@@ -76,7 +96,9 @@ module Fablish2 =
 
         let sw = System.Diagnostics.Stopwatch()
 
-        let takeModel (m : MVar<_>) = SocketOp.ofAsync (MVar.takeAsync m)
+        let lockObj = obj()
+
+        let mutable currentRegistrations = Map.empty
 
         let send (model : 'model) =
             socket {
@@ -98,11 +120,12 @@ module Fablish2 =
 
                 printfn "[fablish] writing %f kb to client" (float bytes.Length / 1024.0)
                 do! webSocket.send Opcode.Text bytes true
-                return Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) registrations
+                currentRegistrations <- Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) currentRegistrations
             }
 
 
-        let rec tryReceiveChannel registrations = 
+
+        let rec tryReceiveChannel () = 
             socket {
                 let! msg = webSocket.read()
                 match msg with
@@ -112,7 +135,7 @@ module Fablish2 =
                             | Choice1Of2 
                                 { id = id; data = { eventId = Int eventId; eventValue = eventValue} } 
                                     when id = eventOccurance -> 
-                                        match Map.tryFind eventId registrations with
+                                        match Map.tryFind eventId currentRegistrations with
                                             | Some action -> 
                                                 match action eventValue with
                                                     | Some msg -> 
@@ -134,38 +157,35 @@ module Fablish2 =
                     | _ -> 
                         return failwithf "[fablish] protocol error (Web said: %A instead of text or close)" msg
             }
-        
-        and tryReceive registrations = 
-            tryReceiveChannel registrations
+       
 
-        and receive mvar (runningApp : RunningApp<_,_>) registrations = 
+        and receive (runningApp : RunningApp<_,_>) = 
             socket {
-                let! result = SocketOp.ofAsync ( Async.Choice2(tryReceive registrations, takeModel mvar) )
+                let! result = tryReceiveChannel ()
                 match result with
-                    | Some (Choice1Of2(Choice2Of2 e)) -> return! SocketOp.abort e
-                    | Some (Choice1Of2(Choice1Of2 r)) -> 
-                        match r with
-                            | Termination -> ()
-                            | Message msg -> 
-                                runningApp.EmitMessage msg
-                                return! receive mvar runningApp registrations
-                            | NoMessage -> 
-                                return! receive mvar runningApp registrations
-                            | ForceRendering -> 
-                                let! registrations = send runningApp.UnsafeCurrentModel
-                                return! receive mvar runningApp registrations
-                    | Some (Choice2Of2(Choice2Of2 e)) -> return! SocketOp.abort e
-                    | Some (Choice2Of2(Choice1Of2 m)) -> 
-                        let! registrations = send m
-                        return! receive mvar runningApp registrations
-                    | None -> return! SocketOp.abort <| Error.InputDataError "could not join"
+                    | Termination -> ()
+                    | Message msg -> 
+                        runningApp.EmitMessage msg
+                        return! receive runningApp
+                    | NoMessage -> 
+                        return! receive runningApp
+                    | ForceRendering -> 
+                        let! _ = send runningApp.UnsafeCurrentModel
+                        return! receive runningApp
+            }
+
+        and runOuterChanges (mvar : MVar<'model>) (runningApp : RunningApp<_,_>) =
+            socket {
+                let! model = SocketOp.ofAsync <| MVar.takeAsync mvar 
+                let! _ = send model
+                return! runOuterChanges mvar runningApp
             }
 
         and runElmLoop (mvar : MVar<'model>) (runningApp : RunningApp<'model,'msg>) =
             socket {
                 let initialModel = MVar.take mvar
                 let! registrations = send initialModel
-                return! receive mvar runningApp registrations
+                return! receive runningApp
             }
 
         fun ctx -> 
