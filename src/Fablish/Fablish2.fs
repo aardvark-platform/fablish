@@ -75,7 +75,7 @@ module Fablish2 =
 
         member x.EmitModel newModel =
             lock viewers (fun _ ->
-                if System.Object.ReferenceEquals(model,model.Value) then ()
+                if System.Object.ReferenceEquals(newModel,model.Value) || Unchecked.equals newModel model.Value then ()
                 else
                     model.Value <- newModel
                     for sub in modelSubscriptions.Values do
