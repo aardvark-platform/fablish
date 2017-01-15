@@ -29,7 +29,7 @@ module Fablish2 =
 
     open Aardvark.Base.Monads.State
 
-    type Callback<'msg> = 'msg -> ('msg -> unit) -> unit
+    type Callback<'model, 'msg> = 'model -> 'msg -> 'model
 
     let render v = 
         let topLevelWrapped = div [] [v] // some libs such as react do crazy shit with top level element
@@ -73,6 +73,16 @@ module Fablish2 =
                     MVar.put v newModel
             )
 
+        member x.EmitModel newModel =
+            lock viewers (fun _ -> 
+                model.Value <- newModel
+                for sub in modelSubscriptions.Values do
+                    sub newModel
+
+                for v in viewers do
+                    MVar.put v newModel
+            )
+
         member x.SubscribeModel(f : 'model -> unit) =
             let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> modelSubscriptions.Remove x |> ignore) }
             lock viewers (fun _ -> 
@@ -89,7 +99,7 @@ module Fablish2 =
 
         member x.UnsafeCurrentModel = model.Value
 
-    let runView (runningApp : RunningApp<_,_>) (onMessage : Callback<'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
+    let runView (runningApp : RunningApp<_,_>) (onMessage : Callback<'model,'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
 
         let writeString (s : string) =
             socket {
@@ -167,7 +177,7 @@ module Fablish2 =
                 match result with
                     | Termination -> ()
                     | Message msg -> 
-                        onMessage msg runningApp.EmitMessage 
+                        runningApp.EmitModel(onMessage runningApp.UnsafeCurrentModel msg)
                         return! receive runningApp
                     | NoMessage -> 
                         return! receive runningApp
@@ -243,7 +253,7 @@ module Fablish2 =
         shutdown    : System.Threading.CancellationTokenSource
     }
 
-    let serve (address : IPAddress) (port : string) (onMessage : Option<Callback<'msg>>) (app : App<_,_,_>) =
+    let serve (address : IPAddress) (port : string) (onMessage : Option<Callback<'model,'msg>>) (app : App<_,_,_>) =
         let c = Console.ForegroundColor
         Console.ForegroundColor <- ConsoleColor.Green
         printfn "%s" logo
@@ -257,7 +267,7 @@ module Fablish2 =
 
         let runningApp = RunningApp<_,_>(app.initial, app.update)
 
-        let self msg send = send msg
+        let self (model : 'model) (msg : 'msg) : 'model = app.update model msg
 
         let onMessage = 
             match onMessage with
@@ -278,9 +288,9 @@ module Fablish2 =
              shutdown  = cts
         }
 
-    let serveLocally port app = serve IPAddress.Loopback port app
+    let serveLocally port app = serve IPAddress.Loopback port None app
 
     let runLocally port app =
-        let result = serveLocally port None app
+        let result = serveLocally port app
         result.runningTask.Wait()
         app
