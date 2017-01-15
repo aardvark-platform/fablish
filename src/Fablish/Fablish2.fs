@@ -74,13 +74,15 @@ module Fablish2 =
             )
 
         member x.EmitModel newModel =
-            lock viewers (fun _ -> 
-                model.Value <- newModel
-                for sub in modelSubscriptions.Values do
-                    sub newModel
+            lock viewers (fun _ ->
+                if System.Object.ReferenceEquals(model,model.Value) then ()
+                else
+                    model.Value <- newModel
+                    for sub in modelSubscriptions.Values do
+                        sub newModel
 
-                for v in viewers do
-                    MVar.put v newModel
+                    for v in viewers do
+                        MVar.put v newModel
             )
 
         member x.SubscribeModel(f : 'model -> unit) =
