@@ -11,10 +11,10 @@ module WinForms =
     open System.Threading
 
     let runControl (port : string) (app : App<'model,'msg, DomNode<'msg>>) =
-        let url,t,ct = Fablish.serveLocally port app
+        let result = Fablish.ServeLocally(app,port)
 
         let browser = new WebBrowser()
-        browser.Url <- Uri(url)
+        browser.Url <- Uri(result.localUrl)
         browser.Dock <- DockStyle.Fill
         browser
 
@@ -69,15 +69,15 @@ module Chromium =
     let runControl (port : string) (app : App<'model,'msg, DomNode<'msg>>) =
        // if not initialized then failwith "run Chromium.init argv before running a control."
 
-        let instance = Fablish2.serveLocally port app
+        let instance = Fablish.ServeLocally(app, port)
 
         let cleanup _ =
             printfn "[fablish] closing -> shutting down."; 
             instance.shutdown.Cancel()
             printfn "[fablish] closed server."
 
-        printfn "[fablish] serving fablish ui on: %s" instance.url
-        let browser = new Xilium.CefGlue.WindowsForms.CefWebBrowser(StartUrl=instance.url)
+        printfn "[fablish] serving fablish ui on: %s" instance.localUrl
+        let browser = new Xilium.CefGlue.WindowsForms.CefWebBrowser(StartUrl=instance.localUrl)
         browser.Disposed.Add cleanup
         browser.Dock <- DockStyle.Fill
         browser

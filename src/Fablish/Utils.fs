@@ -81,45 +81,19 @@ module EmbeddedResources =
             s.ReadToEnd()
 
 [<AutoOpen>]
-module AsyncExtensions = 
+module JavascriptInterop = 
+    // {"bottom":44,"height":25,"left":0,"right":78.734375,"top":19,"width":78.734375}"
+    type ClientRect = { 
+        bottom : float
+        height : float
+        left   : float
+        right  : float
+        top    : float
+        width  : float
+    }
 
-    open System
-    open System.Threading
-    open System.Threading.Tasks
-
-    type Async with
-        static member Choice(tasks : Async<'T option> seq) : Async<'T option> = async {
-            match Seq.toArray tasks with
-            | [||] -> return None
-            | [|t|] -> return! t
-            | tasks ->
-
-            let! t = Async.CancellationToken
-            return! Async.FromContinuations <|
-                fun (sc,ec,cc) ->
-                    let noneCount = ref 0
-                    let exnCount = ref 0
-                    let innerCts = CancellationTokenSource.CreateLinkedTokenSource t
-
-                    let scont (result : 'T option) =
-                        match result with
-                        | Some _ when Interlocked.Increment exnCount = 1 -> innerCts.Cancel() ; sc result
-                        | None when Interlocked.Increment noneCount = tasks.Length -> sc None
-                        | _ -> ()
-
-                    let econt (exn : exn) =
-                        if Interlocked.Increment exnCount = 1 then 
-                            innerCts.Cancel() ; ec exn
-
-                    let ccont (exn : OperationCanceledException) =
-                        if Interlocked.Increment exnCount = 1 then
-                            innerCts.Cancel(); cc exn
-
-                    for task in tasks do
-                        ignore <| Task.Factory.StartNew(fun () -> Async.StartWithContinuations(task, scont, econt, ccont, innerCts.Token))
-        }
-
-        static member Choice2(a : Async<'a>, b : Async<'b>) : Async<Option<Choice<'a,'b>>> =   
-            let a' = async { let! a = a in return Some (Choice1Of2 a) }
-            let b' = async { let! b= b in  return Some (Choice2Of2 b) }
-            Async.Choice [| a'; b' |]
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module ClientRect =
+        let ofString (s : string) : ClientRect = Pickler.json.UnPickleOfString s
+        let toString (c : ClientRect) = Pickler.json.PickleToString c
+        let empty = { bottom = 0.0; height = 0.0; left = 0.0; right = 0.0; top = 0.0; width = 0.0 }

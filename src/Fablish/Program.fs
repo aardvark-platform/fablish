@@ -72,7 +72,7 @@ module MetroTest =
 open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
 
-module TestApp =
+module ClientViewportApp =
 
     
     type Model = int
@@ -112,21 +112,21 @@ module TestApp =
         }
 
 
-module ManyTestThings =
+module NestingApp =
 
-    type Model = list<TestApp.Model>
+    type Model = list<ClientViewportApp.Model>
 
     type Action = 
-        | Change of int * TestApp.Action
+        | Change of int * ClientViewportApp.Action
 
     let update (model : Model) (a : Action) =
         match a with
-            | Change(i,action) -> List.updateAt i (fun a -> TestApp.update a action) model
+            | Change(i,action) -> List.updateAt i (fun a -> ClientViewportApp.update a action) model
 
     let view (model : Model) : DomNode<Action> =
         let inner = 
             model |> List.mapi (fun i e ->
-                TestApp.view e |> Html.map (fun innerAction -> Change(i, innerAction))
+                ClientViewportApp.view e |> Html.map (fun innerAction -> Change(i, innerAction))
             )
         div [] inner
 
@@ -241,13 +241,13 @@ let main argv =
     let runWindow = true        
 
     if runWindow then
-        let browser = Chromium.runControl "8083" TestApp.app
+        let browser = Chromium.runControl "8083" NestingApp.app
         use w = new Form()
         w.Controls.Add browser
         w.Width <- 800
         w.Height <- 600
         Application.Run(w) 
     else
-        Fablish.runLocally "8083" app
+        Fablish.RunLocally(app, "8083")
 
     0
