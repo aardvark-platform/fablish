@@ -36,7 +36,9 @@
             var React = window.React;
             var ReactDOM = window.ReactDOM;
 
-            var connection = new WebSocket('ws://localhost:8083/ws');
+            var loc = window.location;
+
+            var connection = new WebSocket("ws://" + loc.host + "/ws");
 
 
             var RendererComp = React.createClass({
