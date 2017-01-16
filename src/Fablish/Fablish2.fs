@@ -277,7 +277,7 @@ module Fablish2 =
                 | None -> self
         
         let cts = new CancellationTokenSource()
-        let listening,server = startWebServerAsync defaultConfig (runApp path runningApp onMessage app)
+        let listening,server = startWebServerAsync config (runApp path runningApp onMessage app)
         
         let urla = if IPAddress.IsLoopback address then "localhost" else sprintf "%A" address
         
