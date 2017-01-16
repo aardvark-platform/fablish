@@ -31,8 +31,6 @@ module Fablish =
 
     open Aardvark.Base.Monads.State
 
-    type Callback<'msg> = 'msg -> unit
-
     let render v = 
         let topLevelWrapped = div [] [v] // some libs such as react do crazy shit with top level element
         let (s,r),dom = State.run (0, Map.empty) (Fable.Helpers.Virtualdom.ReactDomRenderer.render ignore topLevelWrapped)
@@ -53,7 +51,7 @@ module Fablish =
             Choice2Of2 (sprintf "could not parse: %s with: %s" s e.Message)
 
 
-    let runView (runningApp : FablishInstance<_,_>) (onMessage : Callback<'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
+    let runView (runningApp : FablishInstance<_,_>) (onMessage : Callback<'model,'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
 
         let writeString (s : string) =
             socket {
@@ -128,7 +126,7 @@ module Fablish =
                 match result with
                     | Termination -> ()
                     | Message msg -> 
-                        onMessage msg 
+                        onMessage runningApp.UnsafeCurrentModel msg 
                         return! receive runningApp
                     | NoMessage -> 
                         return! receive runningApp
@@ -204,7 +202,7 @@ module Fablish =
         shutdown    : unit -> unit
     }
 
-    let serve (address : IPAddress) (port : string) (onMessage : Option<Callback<'msg>>) (app : App<_,_,_>) =
+    let serve (address : IPAddress) (port : string) (onMessage : Option<Callback<'model,'msg>>) (app : App<_,_,_>) =
         let c = Console.ForegroundColor
         Console.ForegroundColor <- ConsoleColor.Green
         printfn "%s" logo
@@ -221,7 +219,7 @@ module Fablish =
         let onMessage = 
             match onMessage with
                 | Some m -> m
-                | None -> runningApp.EmitMessage
+                | None -> (fun (model : 'model) msg -> runningApp.EmitMessage msg)
         
         let cts = new CancellationTokenSource()
         let listening,server = startWebServerAsync defaultConfig (runApp path runningApp onMessage app)
@@ -243,16 +241,16 @@ open System.Net
 
 type Fablish with 
 
-    static member Serve(app : App<'model,'msg, DomNode<'msg>>,?address : IPAddress, ?port : string, ?onMessage : Callback<'msg>)=
+    static member Serve(app : App<'model,'msg, DomNode<'msg>>,?address : IPAddress, ?port : string, ?onMessage : Callback<'model,'msg>)=
         let address = defaultArg address IPAddress.Loopback
         let port = defaultArg port "8083"
         Fablish.serve address port onMessage app
 
-    static member ServeLocally(app : App<'model,'msg, DomNode<'msg>>, ?port : string, ?onMessage : Callback<'msg>) =
+    static member ServeLocally(app : App<'model,'msg, DomNode<'msg>>, ?port : string, ?onMessage : Callback<'model,'msg>) =
         let port = defaultArg port "8083"
         Fablish.serve IPAddress.Loopback port onMessage app
 
-    static member RunLocally(app : App<'model,'msg, DomNode<'msg>>, ?port : string, ?onMessage : Callback<'msg>)=
+    static member RunLocally(app : App<'model,'msg, DomNode<'msg>>, ?port : string, ?onMessage : Callback<'model,'msg>)=
         let port = defaultArg port "8083"
         let r = Fablish.serve IPAddress.Loopback port onMessage app
         r.runningTask.Wait()

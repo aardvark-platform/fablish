@@ -130,6 +130,9 @@ type App<'model,'msg,'view> =
     }
 
 
+type Callback<'model,'msg> = 'model -> 'msg -> unit
+
+
 type Event = { eventId : string; eventValue : string }
 type Message = { id : int; data : Event }
 type RenderRequest = { dom : string; script : string; id : string }
