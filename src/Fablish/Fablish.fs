@@ -31,7 +31,7 @@ module Fablish =
 
     open Aardvark.Base.Monads.State
 
-    type Callback<'msg> = 'msg -> ('msg -> unit) -> unit
+    type Callback<'msg> = 'msg -> unit
 
     let render v = 
         let topLevelWrapped = div [] [v] // some libs such as react do crazy shit with top level element
@@ -53,45 +53,7 @@ module Fablish =
             Choice2Of2 (sprintf "could not parse: %s with: %s" s e.Message)
 
 
-    type RunningApp<'model,'msg>(m : 'model, update : 'model -> 'msg -> 'model) =
-        let viewers = HashSet<MVar<'model>>()
-        let modelSubscriptions = Dictionary<_,_>()
-        let messageSubscriptions = Dictionary<_,_>()
-        let model = Mod.init m
-
-        member x.AddViewer m =
-            lock viewers (fun _ -> 
-                viewers.Add m |> ignore
-                m.Put model.Value
-            )
-        member x.EmitMessage msg =
-            lock viewers (fun _ -> 
-                let newModel = update model.Value msg
-                model.Value <- newModel
-                for sub in messageSubscriptions.Values do
-                    sub msg
-
-                for v in viewers do
-                    MVar.put v newModel
-            )
-
-        member x.SubscribeModel(f : 'model -> unit) =
-            let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> modelSubscriptions.Remove x |> ignore) }
-            lock viewers (fun _ -> 
-                modelSubscriptions.Add(d,f) |> ignore
-            )
-            d
-
-        member x.SubscribeMessage(f : 'msg -> unit) =
-            let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> messageSubscriptions.Remove x |> ignore) }
-            lock viewers (fun _ -> 
-                messageSubscriptions.Add(d,f) |> ignore
-            )
-            d
-
-        member x.UnsafeCurrentModel = model.Value
-
-    let runView (runningApp : RunningApp<_,_>) (onMessage : Callback<'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
+    let runView (runningApp : FablishInstance<_,_>) (onMessage : Callback<'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
 
         let writeString (s : string) =
             socket {
@@ -127,8 +89,6 @@ module Fablish =
                 currentRegistrations <- Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) registrations
             }
 
-
-
         let rec tryReceiveChannel () = 
             socket {
                 let! msg = webSocket.read()
@@ -162,14 +122,13 @@ module Fablish =
                         return failwithf "[fablish] protocol error (Web said: %A instead of text or close)" msg
             }
        
-
-        and receive (runningApp : RunningApp<_,_>) = 
+        and receive (runningApp : FablishInstance<_,_>) = 
             socket {
                 let! result = tryReceiveChannel ()
                 match result with
                     | Termination -> ()
                     | Message msg -> 
-                        onMessage msg runningApp.EmitMessage 
+                        onMessage msg 
                         return! receive runningApp
                     | NoMessage -> 
                         return! receive runningApp
@@ -178,14 +137,14 @@ module Fablish =
                         return! receive runningApp
             }
 
-        and runOuterChanges (mvar : MVar<'model>) (runningApp : RunningApp<_,_>) =
+        and runOuterChanges (mvar : MVar<'model>) (runningApp : FablishInstance<_,_>) =
             socket {
                 let! model = SocketOp.ofAsync <| MVar.takeAsync mvar 
                 let! _ = lock lockObj (fun _ -> send model)
                 return! runOuterChanges mvar runningApp
             }
 
-        and runElmLoop (mvar : MVar<'model>) (runningApp : RunningApp<'model,'msg>) =
+        and runElmLoop (mvar : MVar<'model>) (runningApp : FablishInstance<'model,'msg>) =
             socket {
                 let initialModel = MVar.take mvar
                 let! registrations = send initialModel
@@ -241,8 +200,8 @@ module Fablish =
     type FablishResult<'model,'msg> = {
         localUrl : string
         runningTask : Tasks.Task<unit>
-        runningApp  : RunningApp<'model,'msg>
-        shutdown    : System.Threading.CancellationTokenSource
+        instance    : FablishInstance<'model,'msg>
+        shutdown    : unit -> unit
     }
 
     let serve (address : IPAddress) (port : string) (onMessage : Option<Callback<'msg>>) (app : App<_,_,_>) =
@@ -257,27 +216,23 @@ module Fablish =
              bindings = [ HttpBinding.mk HTTP address (Port.Parse port) ]
           }
 
-        let runningApp = RunningApp<_,_>(app.initial, app.update)
-
-        let self msg send = send msg
+        let runningApp = FablishInstance<_,_>(app.initial, app.update)
 
         let onMessage = 
             match onMessage with
                 | Some m -> m
-                | None -> self
+                | None -> runningApp.EmitMessage
         
         let cts = new CancellationTokenSource()
         let listening,server = startWebServerAsync defaultConfig (runApp path runningApp onMessage app)
         
-        let urla = if IPAddress.IsLoopback address then "localhost" else sprintf "%A" address
-        
         let t = Async.StartAsTask(server,cancellationToken = cts.Token)
         listening |> Async.RunSynchronously |> printfn "[Fablish-suave] start stats: %A"
         {
-             localUrl =  sprintf "http://%s:%s/mainPage" urla port
+             localUrl =  sprintf "http://localhost:%s/mainPage" port
              runningTask = t
-             runningApp =runningApp
-             shutdown  = cts
+             instance = runningApp
+             shutdown  = fun () -> cts.Cancel()
         }
 
 

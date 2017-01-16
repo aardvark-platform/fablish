@@ -16,7 +16,7 @@ module PerformanceTest =
 
      type Action = Inc | Dec
 
-     let update (m : Model) (a : Action) =
+     let update env (m : Model) (a : Action) =
         match a with
             | Inc -> m + 1
             | Dec -> m - 1
@@ -32,6 +32,8 @@ module PerformanceTest =
             initial = 10000
             update = update
             view = view
+            subscriptions = Subscriptions.none
+            
             onRendered = OnRendered.ignore
         }
 
@@ -48,7 +50,7 @@ module MetroTest =
     //    <button class="button">3</button>
     //</div>
 
-    let update m _ = m
+    let update _ m _ = m
 
 
     let view (m : Model) =
@@ -65,6 +67,7 @@ module MetroTest =
             initial = 10000
             update = update
             view = view
+            subscriptions = Subscriptions.none
             onRendered = OnRendered.ignore
         }
 
@@ -75,23 +78,52 @@ open Fable.Helpers.Virtualdom.Html
 module ClientViewportApp =
 
     
-    type Model = int
+    type Model = { number : int; progress : Option<int> }
 
-    type Action = Inc | Dec
+    type Action = Inc | Dec | StartExpensive | ReceiveExpensive of int | Progress of int
 
-    let update (m : Model) (a : Action) =
+    let update (env : Env<Action>) (m : Model) (a : Action) =
         printfn "[Test] computing udpate"
         match a with
-            | Inc -> m + 1
-            | Dec -> m - 1
+            | Inc -> { m with number = m.number + 1 }
+            | Dec -> { m with number = m.number - 1 }
+            | StartExpensive -> 
+                let comp =
+                    async { 
+                        for i in 0 .. 100 do
+                            let p = async { return Progress i }
+                            env.Run (Cmd p)
+                            let! r = Async.Sleep 10
+                            printfn "computing..."
+                        return ReceiveExpensive 1
+                    }
+                env.Run (Cmd comp)
+                m
+            | Progress a -> 
+                { m with progress = Some a }
+            | ReceiveExpensive a -> 
+                { m with number = a; progress = None }
 
     let view (m : Model) : DomNode<Action> =
         printfn "[Test] Computing view"
         div [] [
-            text (sprintf "current content: %d" m)
+            text (sprintf "current content: %d" m.number)
             br []
             button [onMouseClick (fun dontCare -> Inc); attribute "id" "urdar"] [text "increment"]
             button [onMouseClick (fun dontCare -> Dec)] [text "decrement"]
+            button [
+                yield onMouseClick (fun dontCare -> StartExpensive); 
+                if m.progress.IsSome then 
+                    yield attribute "disabled" "disabled" 
+                    yield Style ["backgroundColor","grey"]
+            ] [text "expensive"]
+            br []
+            text (
+                match m.progress with
+                    | None -> sprintf "no operation running"
+                    | Some v -> sprintf "progress %d/100" v
+            )
+            br []
         ]
 
     let onRendered model view =
@@ -103,11 +135,14 @@ module ClientViewportApp =
             serverSide = fun (s : string) -> printfn "clientRect: %A" (ClientRect.ofString s); None
         }
 
+    let initial =  { number = 0; progress = None }
+
     let app =
         {
-            initial = 0
+            initial =  { number = 0; progress = None }
             update = update 
             view = view
+            subscriptions = Subscriptions.none
             onRendered = onRendered //OnRendered.ignore
         }
 
@@ -119,9 +154,9 @@ module NestingApp =
     type Action = 
         | Change of int * ClientViewportApp.Action
 
-    let update (model : Model) (a : Action) =
+    let update (env : Env<Action>) (model : Model) (a : Action) =
         match a with
-            | Change(i,action) -> List.updateAt i (fun a -> ClientViewportApp.update a action) model
+            | Change(i,action) -> List.updateAt i (fun a -> ClientViewportApp.update (Env.map (fun a -> Change(i,a)) env) a action) model
 
     let view (model : Model) : DomNode<Action> =
         let inner = 
@@ -130,11 +165,12 @@ module NestingApp =
             )
         div [] inner
 
-    let app = 
+    let app : App<_,_,_> = 
         {
-            initial = [ 1; 2; 3 ]
+            initial = [ ClientViewportApp.initial; ClientViewportApp.initial;ClientViewportApp.initial]
             update = update
             view = view
+            subscriptions = Subscriptions.none
             onRendered = OnRendered.ignore
         }
 
@@ -145,7 +181,7 @@ module FileApp =
 
     type Message = Open | Accept | Deny 
 
-    let update (m : Model) (msg : Message) =
+    let update env (m : Model) (msg : Message) =
         match msg with
             | Open -> 
                 use dialog = new System.Windows.Forms.OpenFileDialog()
@@ -193,6 +229,7 @@ module FileApp =
             initial = []
             update = update
             view = view
+            subscriptions = Subscriptions.none
             onRendered = OnRendered.ignore
         }
 
@@ -205,11 +242,11 @@ module Surfaces =
         }
     type Msg = Import of list<string> | FileAppMsg of FileApp.Message
 
-    let update model msg =
+    let update env model msg =
         match msg with
             | Import imported -> 
                 { importer = []; currentlyLoaded = model.currentlyLoaded @ imported }
-            | FileAppMsg a -> { model with importer = FileApp.update model.importer a }
+            | FileAppMsg a -> { model with importer = FileApp.update env model.importer a }
 
     let view m =
         div [] [
@@ -223,6 +260,7 @@ module Surfaces =
             initial = { currentlyLoaded = []; importer = [] }
             update = update
             view = view
+            subscriptions = Subscriptions.none
             onRendered = OnRendered.ignore
         }
 
@@ -237,11 +275,11 @@ let main argv =
             components = [ Numeric.initial; Numeric.initial; Numeric.initial ]            
             }
 
-    let app = Surfaces.app
+    let app = NestingApp.app// V3dApp.app m
     let runWindow = true        
 
     if runWindow then
-        let browser = Chromium.runControl "8083" NestingApp.app
+        let browser = Chromium.runControl "8083" app
         use w = new Form()
         w.Controls.Add browser
         w.Width <- 800

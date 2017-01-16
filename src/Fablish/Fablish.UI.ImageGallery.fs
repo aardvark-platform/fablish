@@ -27,7 +27,7 @@ module GalleryApp =
         | Previous
         | Show of Image
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
             | Next      -> failwith ""
             | Previous  -> failwith ""
@@ -46,6 +46,7 @@ module GalleryApp =
         initial = model
         update = update
         view = view
+        subscriptions = Subscriptions.none
         onRendered = OnRendered.ignore
     }
 

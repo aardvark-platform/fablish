@@ -73,7 +73,7 @@ module Chromium =
 
         let cleanup _ =
             printfn "[fablish] closing -> shutting down."; 
-            instance.shutdown.Cancel()
+            instance.shutdown()
             printfn "[fablish] closed server."
 
         printfn "[fablish] serving fablish ui on: %s" instance.localUrl

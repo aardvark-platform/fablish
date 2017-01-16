@@ -104,7 +104,7 @@ module Numeric =
         step    = 0.5
     }
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
             | Increment -> { model with value = min (model.value + model.step) model.max } // immutable record update syntax
             | Decrement -> { model with value = max (model.value - model.step) model.min }
@@ -136,6 +136,7 @@ module Numeric =
         initial = initial
         update = update
         view = view
+        subscriptions = Subscriptions.none
         onRendered = OnRendered.ignore
     }
 
@@ -150,11 +151,11 @@ module Vector3d =
         | Set_Y   of Numeric.Action    
         | Set_Z   of Numeric.Action
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
-            | Set_X a -> { model with x = Numeric.update model.x a }
-            | Set_Y a -> { model with y = Numeric.update model.y a }
-            | Set_Z a -> { model with z = Numeric.update model.z a }
+            | Set_X a -> { model with x = Numeric.update env model.x a }
+            | Set_Y a -> { model with y = Numeric.update env model.y a }
+            | Set_Z a -> { model with z = Numeric.update env model.z a }
 
     let view (model : Model) : DomNode<Action> =
         table [clazz "ui celled table"] [
@@ -189,11 +190,11 @@ module Transformation =
         | Set_Rotation      of Vector3d.Action    
         | Set_Scale         of Vector3d.Action
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
-            | Set_Translation a -> { model with translation = Vector3d.update model.translation a }
-            | Set_Rotation a -> { model with rotation = Vector3d.update model.rotation a }
-            | Set_Scale a -> { model with scale = Vector3d.update model.scale a }
+            | Set_Translation a -> { model with translation = Vector3d.update env model.translation a }
+            | Set_Rotation a -> { model with rotation = Vector3d.update env model.rotation a }
+            | Set_Scale a -> { model with scale = Vector3d.update env model.scale a }
 
     let view (model : Model) : DomNode<Action> =
         table [clazz "ui celled table"] [
@@ -295,11 +296,11 @@ module ValueApp =
         | ComboChange of Choice.Action
         | NumericChange of Numeric.Action
 
-    let update model action =
+    let update env model action =
         match action, model.value with
             | TextChange a, TextInput _ -> { model with value = TextInput a }
             | ComboChange a, ComboBox m -> { model with value = ComboBox <| Choice.update m a }
-            | NumericChange a, NumericInput m -> { model with value = NumericInput <| Numeric.update m a }
+            | NumericChange a, NumericInput m -> { model with value = NumericInput <| Numeric.update env m a }
             | _ -> failwith "property not supported"    
 
     let view (model : Model) : DomNode<Action> =
@@ -320,10 +321,10 @@ module V3dApp =
 
     type Action = Change of int * Numeric.Action
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
             | Change(index,action) -> 
-                { model with components = List.updateAt index (fun x -> Numeric.update x action) model.components}    
+                { model with components = List.updateAt index (fun x -> Numeric.update env x action) model.components}    
 
     let view (model : Model) : DomNode<Action> =
         let numericViews = 
@@ -338,6 +339,7 @@ module V3dApp =
             initial = initial
             view = view
             update = update
+            subscriptions = Subscriptions.none
             onRendered = OnRendered.ignore
     }
 
@@ -352,10 +354,10 @@ module TrafoApp =
 
     let initial = { vectors = List.init 3 (fun _ -> { components = List.init 3 (fun _ -> Numeric.initial) })}
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
             | Change(index, action) ->
-                { model with vectors = List.updateAt index (fun x -> V3dApp.update x action) model.vectors}
+                { model with vectors = List.updateAt index (fun x -> V3dApp.update env x action) model.vectors}
 
     let view (model : Model) : DomNode<Action> =
         let vectorViews =
@@ -366,4 +368,4 @@ module TrafoApp =
                 yield div [] [n]
         ]
 
-    let app = { initial = initial; view = view; update = update; onRendered = OnRendered.ignore }
+    let app = { initial = initial; view = view; update = update; onRendered = OnRendered.ignore; subscriptions = Subscriptions.none }

@@ -14,7 +14,7 @@ module PerformanceTest =
 
      type Action = Inc | Dec
 
-     let update (m : Model) (a : Action) =
+     let update env (m : Model) (a : Action) =
         match a with
             | Inc -> m + 1
             | Dec -> m - 1
@@ -30,6 +30,7 @@ module PerformanceTest =
             initial = 10000
             update = update
             view = view
+            subscriptions = Subscriptions.none
             onRendered = OnRendered.ignore
         }
 
@@ -46,7 +47,7 @@ module MetroTest =
     //    <button class="button">3</button>
     //</div>
 
-    let update m _ = m
+    let update _ m _ = m
 
 
     let view (m : Model) =
@@ -63,5 +64,6 @@ module MetroTest =
             initial = 10000
             update = update
             view = view
+            subscriptions = Subscriptions.none
             onRendered = OnRendered.ignore
         }
