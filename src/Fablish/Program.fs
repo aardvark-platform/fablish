@@ -88,16 +88,13 @@ module ClientViewportApp =
             | Inc -> { m with number = m.number + 1 }
             | Dec -> { m with number = m.number - 1 }
             | StartExpensive -> 
-                let comp =
-                    async { 
-                        for i in 0 .. 100 do
-                            let p = async { return Progress i }
-                            env.Run (Cmd p)
-                            let! r = Async.Sleep 10
-                            printfn "computing..."
-                        return ReceiveExpensive 1
-                    }
-                env.Run (Cmd comp)
+                async { 
+                    for i in 0 .. 100 do
+                        async { return Progress i } |> Cmd |> env.run
+                        let! r = Async.Sleep 10
+                        printfn "computing..."
+                    return ReceiveExpensive 1
+                } |> Cmd |> env.run
                 m
             | Progress a -> 
                 { m with progress = Some a }

@@ -53,26 +53,25 @@ module UglyStuff =
     open Aardvark.Base
     open Aardvark.Base.Incremental
 
-    type Env<'msg> = 
-        abstract member Run : Cmd<'msg> -> unit 
+    type Env<'msg> = { run : Cmd<'msg> -> unit }
 
-    and FablishInstance<'model,'msg>(m : 'model, update : Env<'msg> -> 'model -> 'msg -> 'model) as this =
+    type FablishInstance<'model,'msg>(m : 'model, update : Env<'msg> -> 'model -> 'msg -> 'model) as this =
         let viewers = HashSet<MVar<'model>>()
         let modelSubscriptions = Dictionary<_,_>()
         let messageSubscriptions = Dictionary<_,_>()
         let model = Mod.init m
 
-        let env = 
-            { new Env<'msg> with
-                member x.Run(cmd) = 
-                    match cmd with
-                        | NoCmd -> ()
-                        | Cmd cmd -> 
-                            async {
-                                let! msg = cmd
-                                this.EmitMessage msg
-                            } |> Async.Start
-         }
+        let emit cmd = 
+            match cmd with
+                | NoCmd -> ()
+                | Cmd cmd -> 
+                    async {
+                        let! msg = cmd
+                        this.EmitMessage msg
+                    } |> Async.Start
+
+        let env = { run = emit }
+
 
         member x.AddViewer m =
             lock viewers (fun _ -> 
@@ -108,20 +107,15 @@ module UglyStuff =
 
     module Env =
         let map (f : 'b -> 'a) (a : Env<'a>) : Env<'b> =
-            {
-                new Env<'b> with
-                    member x.Run b = 
-                        match b with
-                            | Cmd.NoCmd -> ()
-                            | Cmd.Cmd c -> 
-                                let f = 
-                                    async {
-                                        let! c = c
-                                        return f c
-                                    } |> Cmd.Cmd
-                                a.Run f
-                                
-            }
+            let run cmd =
+                match cmd with
+                    | Cmd.NoCmd -> ()
+                    | Cmd.Cmd c -> 
+                        async {
+                            let! c = c
+                            return f c
+                        } |> Cmd.Cmd |> a.run
+            { run = run }
 
 
 type App<'model,'msg,'view> = 
