@@ -31,8 +31,12 @@ type OnRendered<'model,'msg,'view> = 'model -> 'view -> Reaction<'msg>
 module OnRendered =
     let ignore : 'model -> 'view -> Reaction<'msg> = fun _ _ -> { clientSide = Scripts.ignore; serverSide = fun _ -> None }
 
+
 type Sub<'msg> = 
-    | NoSubscription 
+    | NoSub
+    | TimeSub of TimeSpan * (DateTime -> 'msg) 
+    | TwoTime of Sub<'msg> * Sub<'msg>
+
 
 type Cmd<'msg> =
     | NoCmd
@@ -44,12 +48,31 @@ module Cmd =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Sub =
-    let none = NoSubscription
+    let none = NoSub
+    let combine l r = TwoTime(l,r)
+    let rec map (f : 'a -> 'b) (s : Sub<'a>) : Sub<'b> =
+        match s with
+            | NoSub -> NoSub
+            | TimeSub(ts,g) -> TimeSub(ts,fun t -> f (g t))
+            | TwoTime(l,r) -> TwoTime(map f l, map f r)
+    let rec extract (f : Sub<'msg>) : list<TimeSpan * (DateTime -> 'msg)> =
+        match f with
+            | NoSub -> []
+            | TimeSub(ts,g) -> [ts,g]
+            | TwoTime(l,r) -> extract l @ extract r
+    let rec aggregate xs = xs |> List.fold combine NoSub
 
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Subscriptions =
     let none = fun _ -> Sub.none
+
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Time =
+
+    let seconds = TimeSpan.FromSeconds 1.0
+    let every (interval : TimeSpan) (f : DateTime -> 'msg) = TimeSub(interval,f)
 
 
 type Env<'msg> = { run : Cmd<'msg> -> unit }
@@ -59,6 +82,7 @@ type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : 
     let modelSubscriptions = Dictionary<_,_>()
     let messageSubscriptions = Dictionary<_,_>()
     let model = Mod.init m
+    let currentTimer = new Dictionary<TimeSpan,ref<list<DateTime -> 'msg> * list<IDisposable>> * System.Timers.Timer>()
 
     let emit cmd = 
         match cmd with
@@ -90,11 +114,14 @@ type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : 
                 model.Value
         )
 
+    member x.Run(f : unit -> 'b) = lock viewers (fun _ -> f ())
+
     member x.AddViewer m =
         lock viewers (fun _ -> 
             viewers.Add m |> ignore
             m.Put model.Value
         )
+
     member x.EmitMessage msg =
         lock viewers (fun _ -> 
             let newModel = update env model.Value msg
@@ -121,6 +148,47 @@ type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : 
         d
 
     member x.UnsafeCurrentModel = model.Value
+
+    member x.SendSubs (xs : list<TimeSpan * (DateTime -> 'msg)>) =
+        lock viewers (fun _ -> 
+            let newSubs = xs |> List.groupBy fst |> List.map (fun (k,xs) -> k,List.map snd xs) |> Dictionary.ofList
+            let toRemove = List<_>()
+            for (KeyValue(k,(r,timer))) in currentTimer do
+                match newSubs.TryGetValue k with
+                    | (true,v) -> 
+                        let oldSubs = snd !r
+                        oldSubs |> List.iter (fun a -> a.Dispose())
+                        r := (v, v |> List.map (fun a -> timer.Elapsed.Subscribe(fun _ -> x.EmitMessage (a DateTime.Now))))
+                    | _ -> 
+                        !r |> snd |> List.iter (fun a -> a.Dispose())
+                        timer.Dispose()
+                        toRemove.Add(k)
+            
+            for (KeyValue(t,actions)) in newSubs do
+                match currentTimer.TryGetValue t with
+                    | (true,v) -> ()
+                    | _ -> 
+                        // new
+                        let timer = new System.Timers.Timer()
+                        timer.Interval <- t.TotalMilliseconds
+                        let disps = actions |> List.map (fun a -> timer.Elapsed.Subscribe(fun _ -> x.EmitMessage (a DateTime.Now)))
+                        timer.Start()
+                        currentTimer.Add(t,(ref (actions,disps), timer))
+            
+            for i in toRemove do currentTimer.Remove i |> ignore
+            printfn "[fablish] currently active timers: %A" currentTimer.Count
+        )
+
+
+    member x.Dispose() =
+        for (KeyValue(k,(r,timer))) in currentTimer do
+            !r |> snd |> List.iter (fun a -> a.Dispose())
+            timer.Stop()
+            timer.Dispose()
+        printfn "[fablish] closed timers"
+
+    interface IDisposable with
+        member x.Dispose() = x.Dispose()
 
     module Env =
         let map (f : 'b -> 'a) (a : Env<'a>) : Env<'b> =

@@ -261,6 +261,76 @@ module Surfaces =
             onRendered = OnRendered.ignore
         }
 
+
+module Time =
+     
+    type Model = { current : DateTime; interval : TimeSpan }
+
+    type Action = Tick of DateTime
+
+    let update e model msg =
+        printfn "clock with interval: %A ticked" model.interval.TotalSeconds
+        match msg with
+            | Tick t ->  { model with current = t }
+
+    let subscriptions m = 
+        Time.every m.interval Tick
+
+    let (=>) a b = attribute a b
+
+    let view (model : Model) : DomNode<Action> = 
+        let angle = (float model.current.Second / 60.0) * Math.PI * 2.0
+        let handX = 50.0 + 40.0 * cos angle |> string
+        let handY = 50.0 + 40.0 * sin angle |> string
+    
+        svg [ viewBox "0 0 100 100"; width "300px" ] [
+            circle [ cx "50"; cy "50"; r "45"; fill "#0B79CE" ] []
+            line [ "x1" =>  "50"; "y1" => "50"; "x2" => handX; "y2" => handY; "stroke" => "#023963" ] []
+        ]
+
+    let initial s = { current = DateTime.Now; interval = s }
+
+    let app =  
+        {
+            initial = { current = DateTime.Now; interval = Time.seconds }
+            update = update
+            view = view
+            subscriptions = subscriptions
+            onRendered = OnRendered.ignore
+        }
+
+module SubscriptionNesting =
+
+    type Model = list<Time.Model>
+
+    type Action = 
+        | Change of int * Time.Action
+
+    let update (env : Env<Action>) (model : Model) (a : Action) =
+        match a with
+            | Change(i,action) -> List.updateAt i (fun a -> Time.update (Env.map (fun a -> Change(i,a)) env) a action) model
+
+    let view (model : Model) : DomNode<Action> =
+        let inner = 
+            model |> List.mapi (fun i e ->
+                Time.view e |> Html.map (fun innerAction -> Change(i, innerAction))
+            )
+        div [] inner
+
+    let subscriptions (model : Model) =
+        let subs = model |> List.mapi (fun i m -> Time.subscriptions m |> Sub.map (fun a -> Change(i,a)))
+        Sub.aggregate subs
+
+    let app : App<_,_,_> = 
+        {
+            initial = [ Time.initial (TimeSpan.FromSeconds 1.0); Time.initial  (TimeSpan.FromSeconds 0.1); Time.initial (TimeSpan.FromSeconds 2.0)]
+            update = update
+            view = view
+            subscriptions = subscriptions
+            onRendered = OnRendered.ignore
+        }
+
+
 [<EntryPoint;STAThread>]
 let main argv =
     ChromiumUtilities.unpackCef()
@@ -273,6 +343,7 @@ let main argv =
             }
 
     let app = NestingApp.app// V3dApp.app m
+    let app = SubscriptionNesting.app
     let runWindow = true        
 
     if runWindow then

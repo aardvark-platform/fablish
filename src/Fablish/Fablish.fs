@@ -63,14 +63,19 @@ module Fablish =
         let lockObj = obj()
 
         let mutable currentRegistrations = Map.empty
+        let mutable currentSubscription = Sub.NoSub
 
         let send (model : 'model) =
             socket {
                 sw.Restart()
                 let view                   = app.view model 
+                let sub                    = app.subscriptions model
                 let vdom, registrations, s = render view
                 sw.Stop()
                 printfn "[fablish] rendering performed in %f milliseconds" sw.Elapsed.TotalMilliseconds
+
+                let allSubscriptions = Sub.extract sub |> runningApp.SendSubs
+                currentSubscription <- sub
 
                 let reaction = app.onRendered model view
                 let onRenderedEvt = s + 1
@@ -120,13 +125,13 @@ module Fablish =
                         return failwithf "[fablish] protocol error (Web said: %A instead of text or close)" msg
             }
        
-        and receive (runningApp : FablishInstance<_,_>) = 
+        and receive (instance : FablishInstance<_,_>) = 
             socket {
                 let! result = tryReceiveChannel ()
                 match result with
                     | Termination -> ()
                     | Message msg -> 
-                        runningApp.EmitModel (onMessage runningApp.UnsafeCurrentModel msg) |> ignore
+                        instance.Run(fun _ -> onMessage instance.UnsafeCurrentModel msg |> ignore) |> ignore
                         return! receive runningApp
                     | NoMessage -> 
                         return! receive runningApp
@@ -214,12 +219,12 @@ module Fablish =
              bindings = [ HttpBinding.mk HTTP address (Port.Parse port) ]
           }
 
-        let runningApp = FablishInstance<'model,'msg>(app.initial, env, app.update)
+        let runningApp = new FablishInstance<'model,'msg>(app.initial, env, app.update)
 
         let onMessage = 
             match onMessage with
                 | Some m -> m
-                | None -> (fun (model : 'model) msg -> runningApp.EmitModel (app.update runningApp.Env runningApp.UnsafeCurrentModel msg))
+                | None -> (fun (model : 'model) msg -> app.update runningApp.Env model msg |> runningApp.EmitModel)
         
         let cts = new CancellationTokenSource()
         let listening,server = startWebServerAsync defaultConfig (runApp path runningApp onMessage app)
@@ -230,7 +235,7 @@ module Fablish =
              localUrl =  sprintf "http://localhost:%s/mainPage" port
              runningTask = t
              instance = runningApp
-             shutdown  = fun () -> cts.Cancel()
+             shutdown  = fun () -> runningApp.Dispose(); cts.Cancel(); 
         }
 
 

@@ -325,6 +325,7 @@ module Html =
         let inline svg x = svgElem "svg" x
         let inline circle x = svgElem "circle" x 
         let inline rect x = svgElem "rect" x 
+        let inline line x = svgElem "line" x
 
         let inline width x = attribute "width" x
         let inline height x = attribute "height" x
