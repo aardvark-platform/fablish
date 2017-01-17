@@ -279,13 +279,17 @@ module Time =
     let (=>) a b = attribute a b
 
     let view (model : Model) : DomNode<Action> = 
-        let angle = (float model.current.Second / 60.0) * Math.PI * 2.0
+        let angle = ((float model.current.Second + float model.current.Millisecond / 1000.0) / 60.0) * Math.PI * 2.0
         let handX = 50.0 + 40.0 * cos angle |> string
         let handY = 50.0 + 40.0 * sin angle |> string
     
-        svg [ viewBox "0 0 100 100"; width "300px" ] [
-            circle [ cx "50"; cy "50"; r "45"; fill "#0B79CE" ] []
-            line [ "x1" =>  "50"; "y1" => "50"; "x2" => handX; "y2" => handY; "stroke" => "#023963" ] []
+        div [] [
+            svg [ viewBox "0 0 100 100"; width "300px" ] [
+                circle [ cx "50"; cy "50"; r "45"; fill "#0B79CE" ] []
+                line [ "x1" =>  "50"; "y1" => "50"; "x2" => handX; "y2" => handY; "stroke" => "#023963" ] []
+            ]
+            //br []
+            text (sprintf "refresh: %A" model.interval)
         ]
 
     let initial s = { current = DateTime.Now; interval = s }
@@ -343,7 +347,7 @@ let main argv =
             }
 
     let app = NestingApp.app// V3dApp.app m
-    let app = SubscriptionNesting.app
+    //let app = SubscriptionNesting.app
     let runWindow = true        
 
     if runWindow then
