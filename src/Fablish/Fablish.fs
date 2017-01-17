@@ -126,7 +126,7 @@ module Fablish =
                 match result with
                     | Termination -> ()
                     | Message msg -> 
-                        onMessage runningApp.UnsafeCurrentModel msg 
+                        runningApp.EmitModel (onMessage runningApp.UnsafeCurrentModel msg) |> ignore
                         return! receive runningApp
                     | NoMessage -> 
                         return! receive runningApp
@@ -202,7 +202,7 @@ module Fablish =
         shutdown    : unit -> unit
     }
 
-    let serve (address : IPAddress) (port : string) (onMessage : Option<Callback<'model,'msg>>) (app : App<_,_,_>) =
+    let serve (address : IPAddress) (port : string) (onMessage : Option<Callback<'model,'msg>>) (env : Option<Env<'msg>>) (app : App<_,_,_>) =
         let c = Console.ForegroundColor
         Console.ForegroundColor <- ConsoleColor.Green
         printfn "%s" logo
@@ -214,12 +214,12 @@ module Fablish =
              bindings = [ HttpBinding.mk HTTP address (Port.Parse port) ]
           }
 
-        let runningApp = FablishInstance<_,_>(app.initial, app.update)
+        let runningApp = FablishInstance<'model,'msg>(app.initial, env, app.update)
 
         let onMessage = 
             match onMessage with
                 | Some m -> m
-                | None -> (fun (model : 'model) msg -> runningApp.EmitMessage msg)
+                | None -> (fun (model : 'model) msg -> runningApp.EmitModel (app.update runningApp.Env runningApp.UnsafeCurrentModel msg))
         
         let cts = new CancellationTokenSource()
         let listening,server = startWebServerAsync defaultConfig (runApp path runningApp onMessage app)
@@ -241,17 +241,17 @@ open System.Net
 
 type Fablish with 
 
-    static member Serve(app : App<'model,'msg, DomNode<'msg>>,?address : IPAddress, ?port : string, ?onMessage : Callback<'model,'msg>)=
+    static member Serve(app : App<'model,'msg, DomNode<'msg>>,?address : IPAddress, ?port : string, ?onMessage : Callback<'model,'msg>, ?env : Env<'msg>)=
         let address = defaultArg address IPAddress.Loopback
         let port = defaultArg port "8083"
-        Fablish.serve address port onMessage app
+        Fablish.serve address port onMessage env app 
 
-    static member ServeLocally(app : App<'model,'msg, DomNode<'msg>>, ?port : string, ?onMessage : Callback<'model,'msg>) =
+    static member ServeLocally(app : App<'model,'msg, DomNode<'msg>>, ?port : string, ?onMessage : Callback<'model,'msg>, ?env : Env<'msg>) =
         let port = defaultArg port "8083"
-        Fablish.serve IPAddress.Loopback port onMessage app
+        Fablish.serve IPAddress.Loopback port onMessage env app
 
-    static member RunLocally(app : App<'model,'msg, DomNode<'msg>>, ?port : string, ?onMessage : Callback<'model,'msg>)=
+    static member RunLocally(app : App<'model,'msg, DomNode<'msg>>, ?port : string, ?onMessage : Callback<'model,'msg>, ?env : Env<'msg>)=
         let port = defaultArg port "8083"
-        let r = Fablish.serve IPAddress.Loopback port onMessage app
+        let r = Fablish.serve IPAddress.Loopback port onMessage env app
         r.runningTask.Wait()
 

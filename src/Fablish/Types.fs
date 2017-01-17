@@ -54,7 +54,7 @@ module Subscriptions =
 
 type Env<'msg> = { run : Cmd<'msg> -> unit }
 
-type FablishInstance<'model,'msg>(m : 'model, update : Env<'msg> -> 'model -> 'msg -> 'model) as this =
+type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : Env<'msg> -> 'model -> 'msg -> 'model) as this =
     let viewers = HashSet<MVar<'model>>()
     let modelSubscriptions = Dictionary<_,_>()
     let messageSubscriptions = Dictionary<_,_>()
@@ -69,8 +69,26 @@ type FablishInstance<'model,'msg>(m : 'model, update : Env<'msg> -> 'model -> 'm
                     this.EmitMessage msg
                 } |> Async.Start
 
-    let env = { run = emit }
+    let env =
+        match env with
+            | None -> { run = emit }
+            | Some e -> e
 
+    member x.Env = env
+
+    member x.EmitModel newModel =
+        lock viewers (fun _ ->
+            if System.Object.ReferenceEquals(newModel,model.Value) || Unchecked.equals newModel model.Value then model.Value
+            else
+                model.Value <- newModel
+                for sub in modelSubscriptions.Values do
+                    sub newModel
+
+                for v in viewers do
+                    MVar.put v newModel
+
+                model.Value
+        )
 
     member x.AddViewer m =
         lock viewers (fun _ -> 
@@ -129,7 +147,7 @@ type App<'model,'msg,'view> =
     }
 
 
-type Callback<'model,'msg> = 'model -> 'msg -> unit
+type Callback<'model,'msg> = 'model -> 'msg -> 'model
 
 
 type Event = { eventId : string; eventValue : string }
