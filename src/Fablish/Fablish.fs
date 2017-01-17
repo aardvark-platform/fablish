@@ -51,7 +51,7 @@ module Fablish =
             Choice2Of2 (sprintf "could not parse: %s with: %s" s e.Message)
 
 
-    let runView (runningApp : FablishInstance<_,_>) (onMessage : Callback<'model,'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
+    let runView (instance : FablishInstance<_,_>) (onMessage : Callback<'model,'msg>) (app : App<_,_,_>) (webSocket : WebSocket) : HttpContext -> SocketOp<unit> =
 
         let writeString (s : string) =
             socket {
@@ -74,7 +74,7 @@ module Fablish =
                 sw.Stop()
                 printfn "[fablish] rendering performed in %f milliseconds" sw.Elapsed.TotalMilliseconds
 
-                let allSubscriptions = Sub.extract sub |> runningApp.SendSubs
+                let allSubscriptions = Sub.extract sub |> instance.SendSubs
                 currentSubscription <- sub
 
                 let reaction = app.onRendered model view
@@ -132,26 +132,26 @@ module Fablish =
                     | Termination -> ()
                     | Message msg -> 
                         instance.Run(fun _ -> onMessage instance.UnsafeCurrentModel msg |> ignore) |> ignore
-                        return! receive runningApp
+                        return! receive instance
                     | NoMessage -> 
-                        return! receive runningApp
+                        return! receive instance
                     | ForceRendering -> 
-                        let! _ = lock lockObj (fun _ -> send runningApp.UnsafeCurrentModel)
-                        return! receive runningApp
+                        let! _ = lock lockObj (fun _ -> send instance.UnsafeCurrentModel)
+                        return! receive instance
             }
 
-        and runOuterChanges (mvar : MVar<'model>) (runningApp : FablishInstance<_,_>) =
+        and runOuterChanges (mvar : MVar<'model>) (instance : FablishInstance<_,_>) =
             socket {
                 let! model = SocketOp.ofAsync <| MVar.takeAsync mvar 
                 let! _ = lock lockObj (fun _ -> send model)
-                return! runOuterChanges mvar runningApp
+                return! runOuterChanges mvar instance
             }
 
-        and runElmLoop (mvar : MVar<'model>) (runningApp : FablishInstance<'model,'msg>) =
+        and runElmLoop (mvar : MVar<'model>) (instance : FablishInstance<'model,'msg>) =
             socket {
                 let initialModel = MVar.take mvar
                 let! registrations = send initialModel
-                return! receive runningApp
+                return! receive instance
             }
 
         fun ctx -> 
@@ -163,22 +163,22 @@ module Fablish =
                         let s = getString data
                         if s =  magic then
                             let mvar = MVar.empty()
-                            runningApp.AddViewer mvar
-                            let t = runOuterChanges mvar runningApp |> Async.Ignore
+                            instance.AddViewer mvar
+                            let t = runOuterChanges mvar instance |> Async.Ignore
                             Async.Start(t,ct)
-                            return! runElmLoop mvar runningApp
+                            return! runElmLoop mvar instance
                         else 
                             return failwithf "initial handshake failed. Web should have said: %s" magic
                     | _ -> return! failwith "initial handshake failed (should have received text)"
             }
 
 
-    let runPlain runningApp onMessage app : WebPart =
-        path "/ws" >=> handShake (runView runningApp onMessage app)
+    let runPlain instance onMessage app : WebPart =
+        path "/ws" >=> handShake (runView instance onMessage app)
 
-    let runApp mainPage runningApp onMessage app : WebPart =
+    let runApp mainPage instance onMessage app : WebPart =
         choose [
-            runPlain runningApp onMessage app
+            runPlain instance onMessage app
             GET >=> choose [ 
                 path "/mainPage" >=> file mainPage
                 path "/mainPage" >=> OK (EmbeddedResources.extractPage mainPage)
@@ -194,11 +194,6 @@ module Fablish =
 |  |`  |  | |  ||  '--' /|  '--.|  |.-'    ||  |  |  | 
 `--'   `--' `--'`------' `-----'`--'`-----' `--'  `--' 2.0"""
 
-//
-//    type Elmish<'model,'msg> = {
-//        update  : 'model -> 'msg -> 'model
-//        view    : 'model -> rapp<'msg> 
-//    }
 
     type FablishResult<'model,'msg> = {
         localUrl : string
@@ -219,23 +214,23 @@ module Fablish =
              bindings = [ HttpBinding.mk HTTP address (Port.Parse port) ]
           }
 
-        let runningApp = new FablishInstance<'model,'msg>(app.initial, env, app.update)
+        let instance = new FablishInstance<'model,'msg>(app.initial, env, app.update)
 
         let onMessage = 
             match onMessage with
                 | Some m -> m
-                | None -> (fun (model : 'model) msg -> app.update runningApp.Env model msg |> runningApp.EmitModel)
+                | None -> (fun (model : 'model) msg -> app.update instance.Env model msg |> instance.EmitModel)
         
         let cts = new CancellationTokenSource()
-        let listening,server = startWebServerAsync defaultConfig (runApp path runningApp onMessage app)
+        let listening,server = startWebServerAsync defaultConfig (runApp path instance onMessage app)
         
         let t = Async.StartAsTask(server,cancellationToken = cts.Token)
         listening |> Async.RunSynchronously |> printfn "[Fablish-suave] start stats: %A"
         {
              localUrl =  sprintf "http://localhost:%s/mainPage" port
              runningTask = t
-             instance = runningApp
-             shutdown  = fun () -> runningApp.Dispose(); cts.Cancel(); 
+             instance = instance
+             shutdown  = fun () -> instance.Dispose(); cts.Cancel(); 
         }
 
 
