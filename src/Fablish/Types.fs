@@ -1,4 +1,9 @@
 ﻿namespace Fablish
+
+open System
+open System.Collections.Generic
+open Aardvark.Base
+open Aardvark.Base.Incremental
     
 [<AutoOpen>]
 module Tokens =
@@ -46,64 +51,58 @@ module Sub =
 module Subscriptions =
     let none = fun _ -> Sub.none
 
-[<AutoOpen>]
-module UglyStuff =
-    open System
-    open System.Collections.Generic
-    open Aardvark.Base
-    open Aardvark.Base.Incremental
 
-    type Env<'msg> = { run : Cmd<'msg> -> unit }
+type Env<'msg> = { run : Cmd<'msg> -> unit }
 
-    type FablishInstance<'model,'msg>(m : 'model, update : Env<'msg> -> 'model -> 'msg -> 'model) as this =
-        let viewers = HashSet<MVar<'model>>()
-        let modelSubscriptions = Dictionary<_,_>()
-        let messageSubscriptions = Dictionary<_,_>()
-        let model = Mod.init m
+type FablishInstance<'model,'msg>(m : 'model, update : Env<'msg> -> 'model -> 'msg -> 'model) as this =
+    let viewers = HashSet<MVar<'model>>()
+    let modelSubscriptions = Dictionary<_,_>()
+    let messageSubscriptions = Dictionary<_,_>()
+    let model = Mod.init m
 
-        let emit cmd = 
-            match cmd with
-                | NoCmd -> ()
-                | Cmd cmd -> 
-                    async {
-                        let! msg = cmd
-                        this.EmitMessage msg
-                    } |> Async.Start
+    let emit cmd = 
+        match cmd with
+            | NoCmd -> ()
+            | Cmd cmd -> 
+                async {
+                    let! msg = cmd
+                    this.EmitMessage msg
+                } |> Async.Start
 
-        let env = { run = emit }
+    let env = { run = emit }
 
 
-        member x.AddViewer m =
-            lock viewers (fun _ -> 
-                viewers.Add m |> ignore
-                m.Put model.Value
-            )
-        member x.EmitMessage msg =
-            lock viewers (fun _ -> 
-                let newModel = update env model.Value msg
-                model.Value <- newModel
-                for sub in messageSubscriptions.Values do
-                    sub msg
+    member x.AddViewer m =
+        lock viewers (fun _ -> 
+            viewers.Add m |> ignore
+            m.Put model.Value
+        )
+    member x.EmitMessage msg =
+        lock viewers (fun _ -> 
+            let newModel = update env model.Value msg
+            model.Value <- newModel
+            for sub in messageSubscriptions.Values do
+                sub msg
 
-                for v in viewers do
-                    MVar.put v newModel
-            )
+            for v in viewers do
+                MVar.put v newModel
+        )
 
-        member x.SubscribeModel(f : 'model -> unit) =
-            let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> modelSubscriptions.Remove x |> ignore) }
-            lock viewers (fun _ -> 
-                modelSubscriptions.Add(d,f) |> ignore
-            )
-            d
+    member x.SubscribeModel(f : 'model -> unit) =
+        let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> modelSubscriptions.Remove x |> ignore) }
+        lock viewers (fun _ -> 
+            modelSubscriptions.Add(d,f) |> ignore
+        )
+        d
 
-        member x.SubscribeMessage(f : 'msg -> unit) =
-            let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> messageSubscriptions.Remove x |> ignore) }
-            lock viewers (fun _ -> 
-                messageSubscriptions.Add(d,f) |> ignore
-            )
-            d
+    member x.SubscribeMessage(f : 'msg -> unit) =
+        let d = { new IDisposable with member x.Dispose() = lock viewers (fun _ -> messageSubscriptions.Remove x |> ignore) }
+        lock viewers (fun _ -> 
+            messageSubscriptions.Add(d,f) |> ignore
+        )
+        d
 
-        member x.UnsafeCurrentModel = model.Value
+    member x.UnsafeCurrentModel = model.Value
 
     module Env =
         let map (f : 'b -> 'a) (a : Env<'a>) : Env<'b> =
@@ -117,7 +116,7 @@ module UglyStuff =
                         } |> Cmd.Cmd |> a.run
             { run = run }
 
-
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 type App<'model,'msg,'view> = 
     {
         initial       : 'model
