@@ -72,7 +72,7 @@ module Fablish =
                 let sub                    = app.subscriptions model
                 let vdom, registrations, s = render view
                 sw.Stop()
-                printfn "[fablish] rendering performed in %f milliseconds" sw.Elapsed.TotalMilliseconds
+                Log.diagnostic "rendering performed in %f milliseconds" sw.Elapsed.TotalMilliseconds
 
                 let allSubscriptions = Sub.extract sub |> instance.SendSubs
                 currentSubscription <- sub
@@ -87,7 +87,7 @@ module Fablish =
 
                 let bytes = { dom = vdom; script = script; id = string onRenderedEvt } |> Pickler.json.Pickle 
 
-                printfn "[fablish] writing %f kb to client" (float bytes.Length / 1024.0)
+                Log.diagnostic "writing %f kb to client" (float bytes.Length / 1024.0)
                 do! webSocket.send Opcode.Text bytes true
                 currentRegistrations <- Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) registrations
             }
@@ -110,7 +110,7 @@ module Fablish =
                                                     | _ -> 
                                                         return NoMessage 
                                             | None -> 
-                                                printfn "[fablish] dont understand event. id was: %A and content was: %A" eventId eventValue
+                                                Fablish.Utils.Log.info "dont understand event. id was: %A and content was: %A" eventId eventValue
                                                 return NoMessage
                             | Choice1Of2 { id = id; data = _ } when id = forceRendering -> 
                                 return ForceRendering

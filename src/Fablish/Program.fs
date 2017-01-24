@@ -22,7 +22,7 @@ module ClientViewportApp =
                     for i in 0 .. 100 do
                         async { return Progress i } |> Cmd |> env.run
                         let! r = Async.Sleep 10
-                        printfn "computing..."
+                        printfn "[Env example] computing: %d/100" i
                     return ReceiveExpensive 1
                 } |> Cmd |> env.run
                 m
@@ -176,16 +176,18 @@ let main argv =
     ChromiumUtilities.unpackCef()
     Chromium.init argv
 
+    //Fablish.Utils.Log.verbosity <- Fablish.Utils.Verbosity.Diagnostic
+
     let app = PerformanceTest.app
 
     // this one demonstrates asynchronous messages (Env and Env.map) as well as html renderer feedback (onRendered) in order to use bounds of a html element.
     let app = NestingApp.app
     
     // this one demonstrates nesting and composition
-    let app = V3dApp.app V3dApp.initial
+    //let app = V3dApp.app V3dApp.initial
     
     // This one demonstrates nested subscriptions (Sub.map and app subscriptions for subscriptions to external events)
-    let app = SubscriptionNesting.app
+    //let app = SubscriptionNesting.app
 
     let runWindow = true        
 

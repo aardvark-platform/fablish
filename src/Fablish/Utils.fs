@@ -62,6 +62,17 @@ module Utils =
                     return! f result
                 }
 
+    type Verbosity = Info = 1 | Diagnostic = 2
+
+    module Log =
+        
+        let mutable verbosity = Verbosity.Info
+        let doPrint v (s : string) =
+            if int v <= int verbosity then printfn "[fablish] %s" s
+
+        let info fmt = Printf.kprintf (doPrint Verbosity.Info) fmt
+        let diagnostic fmt = Printf.kprintf (doPrint Verbosity.Diagnostic) fmt
+
 module EmbeddedResources =
     
     open System
@@ -71,7 +82,6 @@ module EmbeddedResources =
         let plainName = Path.GetFileName page
         let c = Console.BackgroundColor
         Console.ForegroundColor <- ConsoleColor.Green
-        printfn "[fablish] trying to serve: %s but the file could not be found in the home directory (typically ./static/index.html). Trying to use default index.html from fablish build (using embedded resource)." plainName
         let info = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream plainName
         if isNull info then
             failwithf "[fablish] extractPage could not extract embedded resource of name: %s" plainName

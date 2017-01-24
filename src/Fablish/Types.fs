@@ -192,7 +192,7 @@ type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : 
                         currentTimer.Add(t,(ref (actions,disps), timer))
             
             for i in toRemove do currentTimer.Remove i |> ignore
-            printfn "[fablish] currently active timers: %A" currentTimer.Count
+            Log.diagnostic "currently active timers: %A" currentTimer.Count
         )
 
 
@@ -201,7 +201,7 @@ type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : 
             !r |> snd |> List.iter (fun a -> a.Dispose())
             timer.Stop()
             timer.Dispose()
-        printfn "[fablish] closed timers"
+        Log.info "closed timers"
 
     interface IDisposable with
         member x.Dispose() = x.Dispose()
