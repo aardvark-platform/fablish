@@ -161,14 +161,15 @@ module Fablish =
                 match msg with
                     | (Opcode.Text,data,true) -> 
                         let s = getString data
-                        if s =  magic then
-                            let mvar = MVar.empty()
-                            instance.AddViewer mvar
-                            let t = runOuterChanges mvar instance |> Async.Ignore
-                            Async.Start(t,ct)
-                            return! runElmLoop mvar instance
-                        else 
-                            return failwithf "initial handshake failed. Web should have said: %s" magic
+                        if s <>  magic then printfn "[fablish warning] wrong magic first message. should be: %s but was %s. trying to run anyways..." magic s
+
+                        let mvar = MVar.empty()
+                        instance.AddViewer mvar
+                        let t = runOuterChanges mvar instance |> Async.Ignore
+                        Async.Start(t,ct)
+                        return! runElmLoop mvar instance
+//                        else 
+//                            return failwithf "initial handshake failed. Web should have said: %s" magic
                     | _ -> return! failwith "initial handshake failed (should have received text)"
             }
 

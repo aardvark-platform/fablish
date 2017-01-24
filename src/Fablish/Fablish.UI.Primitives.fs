@@ -335,6 +335,8 @@ module V3dApp =
                 yield div [] [n]
         ]
 
+    let initial = { components = [ Numeric.initial; Numeric.initial; Numeric.initial ] }
+
     let app initial = {
             initial = initial
             view = view

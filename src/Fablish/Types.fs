@@ -7,7 +7,7 @@ open Aardvark.Base.Incremental
     
 [<AutoOpen>]
 module Tokens =
-    let magic = "This is Aardvark"
+    let magic = "This is Fablish"
 
     [<Literal>]
     let eventOccurance  = 1
@@ -76,6 +76,22 @@ module Time =
 
 
 type Env<'msg> = { run : Cmd<'msg> -> unit }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Env =
+    let map (f : 'b -> 'a) (a : Env<'a>) : Env<'b> =
+        let run cmd =
+            match cmd with
+                | Cmd.NoCmd -> ()
+                | Cmd.Cmd c -> 
+                    async {
+                        let! c = c
+                        return f c
+                    } |> Cmd.Cmd |> a.run
+        { run = run }
+
+type Callback<'model,'msg> = 'model -> 'msg -> 'model
+
 
 type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : Env<'msg> -> 'model -> 'msg -> 'model) as this =
     let viewers = HashSet<MVar<'model>>()
@@ -190,18 +206,6 @@ type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : 
     interface IDisposable with
         member x.Dispose() = x.Dispose()
 
-    module Env =
-        let map (f : 'b -> 'a) (a : Env<'a>) : Env<'b> =
-            let run cmd =
-                match cmd with
-                    | Cmd.NoCmd -> ()
-                    | Cmd.Cmd c -> 
-                        async {
-                            let! c = c
-                            return f c
-                        } |> Cmd.Cmd |> a.run
-            { run = run }
-
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 type App<'model,'msg,'view> = 
     {
@@ -213,9 +217,6 @@ type App<'model,'msg,'view> =
         // IO extensions
         onRendered : OnRendered<'model,'msg,'view>
     }
-
-
-type Callback<'model,'msg> = 'model -> 'msg -> 'model
 
 
 type Event = { eventId : string; eventValue : string }

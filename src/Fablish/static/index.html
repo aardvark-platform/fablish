@@ -21,12 +21,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css">
     <script src="https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js"></script>
     
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.0/JSXTransformer.js"></script>
     <script src="https://unpkg.com/react@15/dist/react.js"></script>
     <script src="https://unpkg.com/react-dom@15/dist/react-dom.js"></script>
-
-
 
     <script>
 
@@ -79,9 +76,7 @@
                 $('.ui.dropdown').dropdown();
                 $('.ui.accordion').accordion();
                 $('.menu .item').tab();
-                $('.ui.modal')
-                  .modal()
-                 ;
+                $('.ui.modal').modal();
              };
 
             function sendRefresh() {
@@ -110,7 +105,7 @@
 
             connection.onopen = function () {
               var msg = { id : -1, data : "" }
-              connection.send("This is Aardvark"); // Send the message 'Ping' to the server
+              connection.send("This is Fablish"); 
             };
 
             connection.onclose = function () {
@@ -159,7 +154,7 @@
                 $('.ui.modal').modal('show');
             }
 
-        });       
+        });
 
     </script>
 </head>
