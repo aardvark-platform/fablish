@@ -7,14 +7,6 @@ In contrast to Fable [[2]], which uses a F# to JS compiler, this library runs di
 To stay compatible, we reused Fable-arch's API and replaced the virtualdom backend
 with a custom code generator, which creates the HTML DOM via React [[3]].
 
-The overall architecture is
- - Elm architecture similar to fable-arch [[8]]
- - Fable-style API for building views
- - JavaScript code generator for building React DOM
- - WebSocket via Suave [[7]] provides DOM to static webpage
- - the webpage utilizes WebSocket and React to update and render the DOM
- - the overall application can either be fully hosted inside a browser, or by using a chromium window (which is included).
-
 ## When to use
 
 Fablish is useful if your use case looks like:
@@ -32,7 +24,7 @@ module TestApp =
 
     type Action = Inc | Dec
 
-    let update (m : Model) (a : Action) =
+    let update (env : Env<Action>) (m : Model) (a : Action) =
         match a with
             | Inc -> m + 1
             | Dec -> m - 1
@@ -51,9 +43,26 @@ module TestApp =
             update = update 
             view = view
             onRendered = Script.ignore
+            subscriptions = Subscriptions.none
         }
 
 ```
+
+## Architecture
+
+The overall architecture is:
+ - Elm architecture similar to fable-arch [[8]]
+ - Fable-style API for building views
+ - JavaScript code generator for building React DOM
+ - WebSocket via Suave [[7]] provides DOM to static webpage
+ - the webpage utilizes WebSocket and React to update and render the DOM
+ - the overall application can either be fully hosted inside a browser, or by using a chromium window (which is included).
+ 
+ Differences to Fable:
+  - altough the signature is very similar to fable-arch (in fact i copied the Fable.Helpers.Virtualdom and changed some bits), some features of fable-arch are implemented differently (mostly for historical reasons). Although API unification is not a primary goal, at least fablish feels similar to fable-arch and elm.
+ 
+Differences to elm:
+ - instead of returning commands, in fablish, commands can be pushed into a environment passed into the update function. The effects of this change are not totally clear yet, however for the moment it works quite good.
 
 ## Since by default we use Chromium for rendering UIs, we have to initialize Chromium:
 ```F#
