@@ -58,7 +58,7 @@ The overall architecture is:
  - the webpage utilizes WebSocket and React to update and render the DOM
  - the overall application can either be fully hosted inside a browser, or by using a chromium window (which is included).
  
- Differences to Fable:
+Differences to Fable:
   - altough the signature is very similar to fable-arch (in fact i copied the Fable.Helpers.Virtualdom and changed some bits), some features of fable-arch are implemented differently (mostly for historical reasons). Although API unification is not a primary goal, at least fablish feels similar to fable-arch and elm.
  
 Differences to elm:
