@@ -59,10 +59,10 @@ The overall architecture is:
  - the overall application can either be fully hosted inside a browser, or by using a chromium window (which is included).
  
 Differences to Fable:
-  - altough the signature is very similar to fable-arch (in fact i copied the Fable.Helpers.Virtualdom and changed some bits), some features of fable-arch are implemented differently (mostly for historical reasons). Although API unification is not a primary goal, at least fablish feels similar to fable-arch and elm.
+  - altough the signature is very similar to fable-arch (in fact i copied the Fable.Helpers.Virtualdom and changed some bits), some features of fable-arch are implemented differently (mostly for historical reasons). Still, fablish should feel quite similar to fable-arch and learning fablish is therefore much easier,
  
 Differences to elm:
- - instead of returning commands, in fablish, commands can be pushed into a environment passed into the update function. The effects of this change are not totally clear yet, however for the moment it works quite good.
+ - instead of returning commands, in fablish commands can be pushed into a environment which is passed into the update function. The effects of this change are not totally clear yet, however for the moment it works quite good.
 
 ## Since by default we use Chromium for rendering UIs, we have to initialize Chromium:
 ```F#
