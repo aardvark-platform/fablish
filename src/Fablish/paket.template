@@ -4,7 +4,7 @@ authors VRVis Research Center
 description
     Elm architecture for user interfaces implemented in .NET
 files
-	..\..\bin\Release\Fablish.exe ==> lib\net45
+	..\..\bin\Release\Fablish.dll ==> lib\net45
     ..\..\bin\Release\Fablish.pdb ==> lib\net45
 	..\..\libs\Suave.dll ==> lib\net45
 	..\..\libs\Suave.dll.config ==> lib\net45

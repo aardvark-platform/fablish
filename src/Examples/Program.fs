@@ -176,6 +176,7 @@ let main argv =
     ChromiumUtilities.unpackCef()
     Chromium.init argv
 
+    // set verbosity (currently we have diagnostic and info where info is minimal info and diagnostic is rather chatty)
     //Fablish.Utils.Log.verbosity <- Fablish.Utils.Verbosity.Diagnostic
 
     let app = PerformanceTest.app
