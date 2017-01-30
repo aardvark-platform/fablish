@@ -68,20 +68,30 @@ module Text =
     type Action = 
         | Change of string
 
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
             | Change x -> { model with content = x }
 
     let view (model : Model) : DomNode<Action> =
         div [clazz "ui input"] [
             input [
-                //Style ["text-align","right"]
+                Style ["text-align","right"]
                 attribute "value" model.content
                 attribute "type" "text"; //attribute "placeholder" "numeric";
                 //attribute "size" "6"
                 onChange (fun s -> Change (unbox s))
             ]
     ]
+
+    let initial = { content =  "initial" }
+
+    let app = {
+        initial = initial
+        update = update
+        view = view
+        subscriptions = Subscriptions.none
+        onRendered = OnRendered.ignore
+    }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Numeric = 
@@ -97,12 +107,7 @@ module Numeric =
         | Decrement
         | Set of string
 
-    let initial = {
-        value   = 1.0
-        min     = -1.0
-        max     = 5.0
-        step    = 0.5
-    }
+    
 
     let update env (model : Model) (action : Action) =
         match action with
@@ -119,7 +124,7 @@ module Numeric =
     let view (model : Model) : DomNode<Action> =
             div [clazz "ui input"] [
                 input [
-                    Style ["text-align","right"]
+                    Style ["textAlign","right"]
                     attribute "value" (String.Format("{0:0.00}", model.value)) // custom number formatting
                     attribute "type" "text"; attribute "placeholder" "numeric";
                     attribute "size" "6"
@@ -128,9 +133,13 @@ module Numeric =
                 button [clazz "ui icon button"; onMouseClick (fun _ -> Increment)] [i [clazz "angle up icon"] []]
                 button [clazz "ui icon button"; onMouseClick (fun _ -> Decrement)] [i [clazz "angle down icon"] []]
             ]                                  
-    //<div class="ui input">
-    //  <input type="text">
-    //</div>
+
+    let initial = {
+        value   = 1.0
+        min     = -1.0
+        max     = 5.0
+        step    = 0.5
+    }
 
     let app = {
         initial = initial
@@ -175,6 +184,20 @@ module Vector3d =
                     ]
         ]
 
+    let initial = {
+        x = Numeric.initial
+        y = Numeric.initial
+        z = Numeric.initial
+    }
+
+    let app = {
+        initial = initial
+        update = update
+        view = view
+        subscriptions = Subscriptions.none
+        onRendered = OnRendered.ignore
+    }
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Transformation =
     open DomHelpers
@@ -212,7 +235,21 @@ module Transformation =
                             td [clazz "right aligned"] [Vector3d.view model.scale |> Html.map Set_Scale]
                         ]
                     ]
-        ]            
+        ]     
+        
+    let initial = {
+        translation =  Vector3d.initial
+        rotation    =  Vector3d.initial
+        scale       =  Vector3d.initial
+    }   
+    
+    let app = {
+        initial = initial
+        update = update
+        view = view
+        subscriptions = Subscriptions.none
+        onRendered = OnRendered.ignore
+    }    
 
 module ChoiceHelper = 
     open System
@@ -238,14 +275,9 @@ module Choice =
 
     type Model = Choice
 
-    type Action = Select of string
+    type Action = Select of string    
 
-    let initial = {
-        choices = ["Lamber"; "Phong"; "Oren"]
-        selected = "Phong";
-    }
-
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
             | Select x -> { model with selected = x }
   
@@ -256,6 +288,19 @@ module Choice =
             for case in model.choices do yield option [] [text (sprintf "%s" case)]
        ]  
 
+    let initial = {
+        choices = ["Lamber"; "Phong"; "Oren"]
+        selected = "Phong";
+    }
+
+    let app = {
+        initial = initial
+        update = update
+        view = view
+        subscriptions = Subscriptions.none
+        onRendered = OnRendered.ignore
+    }  
+
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Toggle = 
     type Model = Toggle
@@ -263,7 +308,7 @@ module Toggle =
     type Action = 
         | Toggle
     
-    let update (model : Model) (action : Action) =
+    let update env (model : Model) (action : Action) =
         match action with
             | Toggle -> { model with isActive = not model.isActive }
 
@@ -274,7 +319,17 @@ module Toggle =
             input [attribute "type" "checkbox"; attribute "defaultChecked" active'; onMouseClick(fun _ -> Toggle)]
             label [] [text ""]
             
-        ]        
+        ]     
+        
+    let initial = { isActive = false }
+    
+    let app = {
+        initial = initial
+        update = update
+        view = view
+        subscriptions = Subscriptions.none
+        onRendered = OnRendered.ignore
+    }     
 
 module ValueApp = 
     open DomHelpers
@@ -299,7 +354,7 @@ module ValueApp =
     let update env model action =
         match action, model.value with
             | TextChange a, TextInput _ -> { model with value = TextInput a }
-            | ComboChange a, ComboBox m -> { model with value = ComboBox <| Choice.update m a }
+            | ComboChange a, ComboBox m -> { model with value = ComboBox <| Choice.update env m a }
             | NumericChange a, NumericInput m -> { model with value = NumericInput <| Numeric.update env m a }
             | _ -> failwith "property not supported"    
 
