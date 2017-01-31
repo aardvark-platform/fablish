@@ -170,6 +170,59 @@ module SubscriptionNesting =
             onRendered = OnRendered.ignore
         }
 
+module ChoiceTest =
+
+    type Model = Choice.Model 
+
+    type Action = Set of string | Inner of Choice.Action
+
+    let update (e : Env<_>)(m : Model)  (msg : Action) =
+        printfn "%A" msg
+        match msg with
+            | Set s -> { m with selected = s }
+            | Inner a -> Choice.update (Env.map Inner e) m a
+
+    let view model =
+        div [] [
+            input [onChange (fun s -> Set (unbox s))] 
+            Choice.view model |> Html.map Inner
+        ]
+
+    let app : App<_,_,_> = 
+        {
+            initial = Choice.initial
+            update = update
+            view = view
+            subscriptions = Subscriptions.none
+            onRendered = OnRendered.ignore
+        }
+
+module ToggleTest =
+
+    type Model = Toggle.Model 
+
+    type Action = Toggle | Inner of Toggle.Action
+
+    let update (e : Env<_>)(m : Model)  (msg : Action) =
+        printfn "%A" msg
+        match msg with
+            | Toggle -> { m with isActive = not m.isActive }
+            | Inner a -> Toggle.update (Env.map Inner e) m a
+
+    let view model =
+        div [] [
+            input [onChange (fun s -> Toggle)] 
+            Toggle.view model |> Html.map Inner
+        ]
+
+    let app : App<_,_,_> = 
+        {
+            initial = Toggle.initial
+            update = update
+            view = view
+            subscriptions = Subscriptions.none
+            onRendered = OnRendered.ignore
+        }
 
 [<EntryPoint;STAThread>]
 let main argv =
@@ -189,6 +242,8 @@ let main argv =
     
     // This one demonstrates nested subscriptions (Sub.map and app subscriptions for subscriptions to external events)
     //let app = SubscriptionNesting.app
+
+    let app = ToggleTest.app
 
     let runWindow = true        
 

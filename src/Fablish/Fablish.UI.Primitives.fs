@@ -283,14 +283,16 @@ module Choice =
   
     let view<'a when 'a : equality> (model : Model) : DomNode<Action> =
         let onChangeEvt o = o |> unbox |> Select
+        let attr c m = if c=m.selected then [attribute "selected" "selected"] else []
         
-        select [clazz "ui dropdown"; attribute "defaultValue" model.selected; onChange onChangeEvt] [
-            for case in model.choices do yield option [] [text (sprintf "%s" case)]
+        select [clazz "ui dropdown"; onChange onChangeEvt] [
+            for case in model.choices                 
+                do yield option (attr case model) [text (sprintf "%s" case)]
        ]  
 
     let initial = {
-        choices = ["Lamber"; "Phong"; "Oren"]
-        selected = "Phong";
+        choices = ["1"; "2"; "3"]
+        selected = "1";
     }
 
     let app = {
@@ -313,10 +315,10 @@ module Toggle =
             | Toggle -> { model with isActive = not model.isActive }
 
     let view (model : Model) : DomNode<Action> =         
-        let active = if model.isActive then "ui defaultChecked toggle checkbox" else "ui toggle checkbox"
+     //   let active = if model.isActive then "ui defaultChecked toggle checkbox" else "ui toggle checkbox"
         let active' = if model.isActive then "checked" else ""
-        div [clazz active] [
-            input [attribute "type" "checkbox"; attribute "defaultChecked" active'; onMouseClick(fun _ -> Toggle)]
+        div [clazz "ui toggle checkbox"] [
+            input [attribute "type" "checkbox"; attribute "checked" active'; onMouseClick(fun _ -> Toggle)]
             label [] [text ""]
             
         ]     
