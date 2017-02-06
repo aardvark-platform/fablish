@@ -224,6 +224,81 @@ module ToggleTest =
             onRendered = OnRendered.ignore
         }
 
+
+
+module SimpleDrawingApp =
+
+    open Aardvark.Base
+
+    type Polygon = list<V3d>
+
+    type OpenPolygon = {
+        cursor         : Option<V3d>
+        finishedPoints : list<V3d>
+    }
+    
+    type Model = {
+        finished : list<Polygon>
+        working  : Option<OpenPolygon>
+    }
+
+
+    type Action =
+        | ClosePolygon
+        | AddPoint   of V3d
+        | MoveCursor of V3d
+
+    let update e (m : Model) (cmd : Action) =
+        match cmd with
+            | ClosePolygon -> 
+                match m.working with
+                    | None -> m
+                    | Some p -> 
+                        { m with 
+                            working = None 
+                            finished = p.finishedPoints :: m.finished
+                        }
+            | AddPoint p ->
+                match m.working with
+                    | None -> { m with working = Some { finishedPoints = [ p ]; cursor = None;  }}
+                    | Some v -> 
+                        { m with working = Some { v with finishedPoints = p :: v.finishedPoints }}
+            | MoveCursor p ->
+                match m.working with
+                    | None -> { m with working = Some { finishedPoints = []; cursor = Some p }}
+                    | Some v -> { m with working = Some { v with cursor = Some p }}
+//        div [] [
+//            svg [ viewBox "0 0 100 100"; width "300px" ] [
+//                circle [ cx "50"; cy "50"; r "45"; fill "#0B79CE" ] []
+//                line [ "x1" =>  "50"; "y1" => "50"; "x2" => handX; "y2" => handY; "stroke" => "#023963" ] []
+//            ]
+//        ]
+
+    let (=>) a b = attribute a b
+    let viewPolygon (p : list<V3d>) =
+        [ for edge in Polygon3d(p |> List.toSeq).EdgeLines do
+             yield line [ "x1" => (string edge.P0.X); "y1" => string edge.P0.Y; "x2" => string edge.P1.X; "y2" =>  string edge.P1.X; "stroke" => "#023963" ] []
+        ] 
+
+
+    let view (m : Model) = 
+        let mouseClick _ = failwith ""
+        svg [viewBox "0 0 100 100"; width "300px"; attribute "onClick" "'function (ev) { alert(ev);}'"] [
+            for p in m.finished do yield! viewPolygon p
+        ]
+
+
+    let initial = { finished = [[V3d.OOO;V3d.IOO*50.0;V3d.IIO*50.0;V3d.OOO]]; working = None;  }
+
+    let app =
+        {
+            initial = initial
+            update = update
+            view = view 
+            subscriptions = Subscriptions.none
+            onRendered = OnRendered.ignore
+        }
+
 [<EntryPoint;STAThread>]
 let main argv =
     ChromiumUtilities.unpackCef()
@@ -235,7 +310,7 @@ let main argv =
     let app = PerformanceTest.app
 
     // this one demonstrates asynchronous messages (Env and Env.map) as well as html renderer feedback (onRendered) in order to use bounds of a html element.
-    let app = NestingApp.app
+    //let app = NestingApp.app
     
     // this one demonstrates nesting and composition
     //let app = V3dApp.app V3dApp.initial
@@ -243,7 +318,8 @@ let main argv =
     // This one demonstrates nested subscriptions (Sub.map and app subscriptions for subscriptions to external events)
     //let app = SubscriptionNesting.app
 
-    let app = ToggleTest.app
+    let app = SimpleDrawingApp.app
+    //let app = ToggleTest.app
 
     let runWindow = true        
 
