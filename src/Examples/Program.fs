@@ -247,6 +247,7 @@ module SimpleDrawingApp =
         | ClosePolygon
         | AddPoint   of V3d
         | MoveCursor of V3d
+        |Nop
 
     let update e (m : Model) (cmd : Action) =
         match cmd with
@@ -262,29 +263,48 @@ module SimpleDrawingApp =
                 match m.working with
                     | None -> { m with working = Some { finishedPoints = [ p ]; cursor = None;  }}
                     | Some v -> 
-                        { m with working = Some { v with finishedPoints = p :: v.finishedPoints }}
+                        { m with working = Some { v with finishedPoints = m.working.Value.cursor.Value :: v.finishedPoints }}
             | MoveCursor p ->
                 match m.working with
                     | None -> { m with working = Some { finishedPoints = []; cursor = Some p }}
                     | Some v -> { m with working = Some { v with cursor = Some p }}
-//        div [] [
-//            svg [ viewBox "0 0 100 100"; width "300px" ] [
-//                circle [ cx "50"; cy "50"; r "45"; fill "#0B79CE" ] []
-//                line [ "x1" =>  "50"; "y1" => "50"; "x2" => handX; "y2" => handY; "stroke" => "#023963" ] []
-//            ]
-//        ]
+            | Nop -> m
+
 
     let (=>) a b = attribute a b
     let viewPolygon (p : list<V3d>) =
         [ for edge in Polygon3d(p |> List.toSeq).EdgeLines do
-             yield line [ "x1" => (string edge.P0.X); "y1" => string edge.P0.Y; "x2" => string edge.P1.X; "y2" =>  string edge.P1.X; "stroke" => "#023963" ] []
+             yield line [ "x1" => string edge.P0.X; "y1" => string edge.P0.Y; "x2" => string edge.P1.X; "y2" =>  string edge.P1.Y; "stroke" => "#023963" ] []
         ] 
 
+    let onClick = 
+        """function(ev) { 
+            var e = ev.target;
+            var dim = e.getBoundingClientRect();
+            var x = ev.clientX - dim.left;
+            var y = ev.clientY - dim.top;
+            return { x : ev.clientX, y : ev.clientY };
+        }"""
+
+    type V2 = { x : int; y : int }
+
+    let readClick (str : string)   =
+        let v : V2 = Pickler.json.UnPickleOfString str
+        V3d(v.x,v.y,0)
 
     let view (m : Model) = 
-        let mouseClick _ = failwith ""
-        svg [viewBox "0 0 100 100"; width "300px"; attribute "onClick" "'function (ev) { alert(ev);}'"] [
+        svg [ width "640px"; height "480px" 
+              ClientEvent("onClick", onClick, readClick >> AddPoint)
+              ClientEvent("onMouseMove", onClick, readClick >> MoveCursor)
+              onDblClick (fun _ -> ClosePolygon)
+              Callback("onContextMenu","return false;") ] [
+
             for p in m.finished do yield! viewPolygon p
+
+            match m.working with
+                | Some p when p.cursor.IsSome && p.finishedPoints |> List.isEmpty |> not -> 
+                    yield! viewPolygon (p.cursor.Value :: p.finishedPoints)
+                | _ -> ()
         ]
 
 

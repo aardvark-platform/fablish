@@ -103,9 +103,15 @@
                 }
             }
 
+            function sendEval(eventId,value)  {
+                var msg = { id : 1, data : { eventId: eventId, eventValue : JSON.stringify(value)}};
+                connection.send(JSON.stringify(msg));
+
+            }
+
             connection.onopen = function () {
               var msg = { id : -1, data : "" }
-              connection.send("This is Fablish"); 
+              connection.send("This is Fablish");
             };
 
             connection.onclose = function () {
@@ -154,12 +160,8 @@
                 $('.ui.modal').modal('show');
             }
 
-            function clicked(evt) {
-                var e = evt.target;
-                var dim = e.getBoundingClientRect();
-                var x = evt.clientX - dim.left;
-                var y = evt.clientY - dim.top;
-                alert("x: " + x + " y:" + y);
+            function createRect(rect) {
+                return { bottom : rect.bottom.toFixed(), height : rect.height.toFixed(), left : rect.left.toFixed(), right : rect.right.toFixed(), top : rect.top.toFixed(), width : rect.width.toFixed() };
             }
 
         });

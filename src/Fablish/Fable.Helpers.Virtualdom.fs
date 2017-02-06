@@ -31,6 +31,7 @@ module Html =
             | Style of Style
             | Property of KeyValue
             | Attribute of KeyValue
+            | ClientEvent of string * string * (string -> 'TMessage)
 
         type Element<'TMessage> = string * Attribute<'TMessage> list
         /// A Node in Html have the following forms
@@ -56,6 +57,7 @@ module Html =
         | Style s -> Style s
         | Property kv -> Property kv
         | Attribute kv -> Attribute kv 
+        | ClientEvent (k,v,f) -> ClientEvent (k,v,f >> mapping)
 
     let mapElem<'T1,'T2> (mapping:('T1 -> 'T2)) (node:Element<'T1>) =
         let (tag, attrs) = node
@@ -233,7 +235,7 @@ module Html =
 
         let inline onMouseClick x = onMouseEvent "onClick" x
         let inline onContextMenu x = onMouseEvent "oncontextmenu" x
-        let inline onDblClick x = onMouseEvent "ondblclick" x
+        let inline onDblClick x = onMouseEvent "onDoubleClick" x
         let inline onMouseDown x = onMouseEvent "onmousedown" x
         let inline onMouseEnter x = onMouseEvent "onmouseenter" x
         let inline onMouseLeave x = onMouseEvent "onmouseleave" x
@@ -535,6 +537,9 @@ let createTree<'T> (handler:'T -> unit) tag (attributes:Attribute<'T> list) chil
             attrs
             |> List.filter (function | Attribute _ -> false | _ -> true)
             |> List.map (function
+                | ClientEvent(ev,v,f) -> 
+                    let id = System.Guid.NewGuid().ToString()
+                    ev ==> sprintf "function(ev) { sendEval('%s'); }" id, Some (id, f)
                 | Attribute _ -> failwith "Shouldn't happen"
                 | Style style -> "style" ==> createObj(unbox style), None
                 | Property (k,v) -> k ==> v, None
@@ -594,6 +599,7 @@ module VirtualDomRenderer =
                                     let call = sprintf "function(ev) { send('%d',ev); }" id 
                                     do! State.put (id+1, Map.add id f registrations)
                                     return sprintf "'%s' : %s" ev call |> Some
+                                | _ -> return failwith ""
                         }
                     )
 
@@ -642,6 +648,11 @@ module ReactDomRenderer =
                                 | EventHandler(ev,f) ->
                                     let! id, registrations = State.get
                                     let call = sprintf "function(ev) { send('%d',ev); }" id 
+                                    do! State.put (id+1, Map.add id (Some << f) registrations)
+                                    return sprintf "'%s' : %s" ev call |> Some
+                                | ClientEvent(ev,str,f) ->
+                                    let! id, registrations = State.get
+                                    let call = sprintf "function(ev) { sendEval('%d',eval(%s)(ev)); return false; }" id str 
                                     do! State.put (id+1, Map.add id (Some << f) registrations)
                                     return sprintf "'%s' : %s" ev call |> Some
                         }

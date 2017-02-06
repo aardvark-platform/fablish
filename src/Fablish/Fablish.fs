@@ -136,6 +136,7 @@ module Fablish =
                     | NoMessage -> 
                         return! receive instance
                     | ForceRendering -> 
+                        Log.diagnostic "force rendering"
                         let! _ = lock lockObj (fun _ -> send instance.UnsafeCurrentModel)
                         return! receive instance
             }
