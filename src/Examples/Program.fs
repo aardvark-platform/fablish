@@ -252,7 +252,7 @@ module SimpleDrawingApp =
         | AddPoint   of V3d
         | MoveCursor of V3d
         | Nop
-        | Start
+        | Start of V3d
         | Stop
 
     let update e (m : Model) (cmd : Action) =
@@ -285,7 +285,7 @@ module SimpleDrawingApp =
                                 { m with working = Some { v with cursor = Some p; finishedPoints = p :: v.finishedPoints} }
                             | _ -> m
             | Nop -> m
-            | Start -> { m with drawing = true }
+            | Start p -> { m with drawing = true; working = Some { finishedPoints = [p]; cursor = Some p } }
             | Stop -> 
                 match m.polygonMode with
                     | PolygonMode.Pen -> close { m with drawing = false }
@@ -321,7 +321,7 @@ module SimpleDrawingApp =
 
                   onDblClick (fun _ -> ClosePolygon)
 
-                  onMouseDown (fun _ -> Start) // for constant drawing
+                  ClientEvent("onMouseDown", onClick, readClick >> Start) // for constant drawing
                   onMouseUp (fun _ -> Stop) // for constant drawing
 
                   Callback("onKeyPress", "console.log('works')") // only works in combination with onRendered
