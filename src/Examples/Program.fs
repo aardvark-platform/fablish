@@ -236,10 +236,14 @@ module SimpleDrawingApp =
         cursor         : Option<V3d>
         finishedPoints : list<V3d>
     }
+
+    type PolygonMode = Pen | Polygon
     
     type Model = {
         finished : list<Polygon>
         working  : Option<OpenPolygon>
+        drawing  : bool
+        polygonMode : PolygonMode
     }
 
 
@@ -247,33 +251,50 @@ module SimpleDrawingApp =
         | ClosePolygon
         | AddPoint   of V3d
         | MoveCursor of V3d
-        |Nop
+        | Nop
+        | Start
+        | Stop
 
     let update e (m : Model) (cmd : Action) =
+        let close m =
+            match m.working with
+            | None -> m
+            | Some p -> 
+                { m with 
+                    working = None 
+                    finished = p.finishedPoints :: m.finished
+                }
         match cmd with
             | ClosePolygon -> 
-                match m.working with
-                    | None -> m
-                    | Some p -> 
-                        { m with 
-                            working = None 
-                            finished = p.finishedPoints :: m.finished
-                        }
+                close m
             | AddPoint p ->
                 match m.working with
                     | None -> { m with working = Some { finishedPoints = [ p ]; cursor = None;  }}
                     | Some v -> 
-                        { m with working = Some { v with finishedPoints = m.working.Value.cursor.Value :: v.finishedPoints }}
+                        match v.finishedPoints,v.cursor with
+                            | x::xs, Some c when c <> x -> // only add if new point is different than old
+                                { m with working = Some { v with finishedPoints = c :: v.finishedPoints }}
+                            | _ -> m
             | MoveCursor p ->
                 match m.working with
                     | None -> { m with working = Some { finishedPoints = []; cursor = Some p }}
-                    | Some v -> { m with working = Some { v with cursor = Some p }}
+                    | Some v -> 
+                        match m.polygonMode with
+                            | PolygonMode.Polygon ->  { m with working = Some { v with cursor = Some p }}
+                            | PolygonMode.Pen when m.drawing ->
+                                { m with working = Some { v with cursor = Some p; finishedPoints = p :: v.finishedPoints} }
+                            | _ -> m
             | Nop -> m
+            | Start -> { m with drawing = true }
+            | Stop -> 
+                match m.polygonMode with
+                    | PolygonMode.Pen -> close { m with drawing = false }
+                    | PolygonMode.Polygon -> { m with drawing = false }
 
 
     let (=>) a b = attribute a b
     let viewPolygon (p : list<V3d>) =
-        [ for edge in Polygon3d(p |> List.toSeq).EdgeLines do
+        [ for edge in Polygon3d(p |> List.toSeq).EdgeLines |> Seq.rev do
              yield line [ "x1" => string edge.P0.X; "y1" => string edge.P0.Y; "x2" => string edge.P1.X; "y2" =>  string edge.P1.Y; "stroke" => "#023963" ] []
         ] 
 
@@ -293,22 +314,45 @@ module SimpleDrawingApp =
         V3d(v.x,v.y,0)
 
     let view (m : Model) = 
-        svg [ width "640px"; height "480px" 
-              ClientEvent("onClick", onClick, readClick >> AddPoint)
-              ClientEvent("onMouseMove", onClick, readClick >> MoveCursor)
-              onDblClick (fun _ -> ClosePolygon)
-              Callback("onContextMenu","return false;") ] [
+        div [] [
+            svg [ width "640px"; height "480px" ; attribute "id" "svgThingy"
+                  ClientEvent("onClick", onClick, readClick >> AddPoint)
+                  ClientEvent("onMouseMove", onClick, readClick >> MoveCursor)
 
-            for p in m.finished do yield! viewPolygon p
+                  onDblClick (fun _ -> ClosePolygon)
 
-            match m.working with
-                | Some p when p.cursor.IsSome && p.finishedPoints |> List.isEmpty |> not -> 
-                    yield! viewPolygon (p.cursor.Value :: p.finishedPoints)
-                | _ -> ()
+                  onMouseDown (fun _ -> Start) // for constant drawing
+                  onMouseUp (fun _ -> Stop) // for constant drawing
+
+                  Callback("onKeyPress", "console.log('works')") // only works in combination with onRendered
+                ] [
+
+                for p in m.finished |> List.rev do yield! viewPolygon p
+
+                match m.working with
+                    | Some p when p.cursor.IsSome && p.finishedPoints |> List.isEmpty |> not -> 
+                        yield! viewPolygon (p.cursor.Value :: p.finishedPoints)
+                    | _ -> ()
+            ]
         ]
 
+    let onRendered model view =
+        {
+            clientSide = JsLambda """() => { 
+                //http://stackoverflow.com/questions/6747848/attaching-keyboard-events-to-an-svg-element-inside-html
+                var svgRect = document.getElementById("svgThingy");
+                svgRect.addEventListener('focus', function(){
+                    this.addEventListener('keypress',function(e){
+                        console.log(e.keyCode);
+                    });
+                }, svgRect);
+                return 0; 
+            } """   
+            serverSide = fun (s : string) -> printfn "onRendered said: %A" s; None
+        }
 
-    let initial = { finished = [[V3d.OOO;V3d.IOO*50.0;V3d.IIO*50.0;V3d.OOO]]; working = None;  }
+
+    let initial = { finished = []; working = None; drawing = false; polygonMode = Pen }
 
     let app =
         {
@@ -316,7 +360,7 @@ module SimpleDrawingApp =
             update = update
             view = view 
             subscriptions = Subscriptions.none
-            onRendered = OnRendered.ignore
+            onRendered = onRendered
         }
 
 [<EntryPoint;STAThread>]

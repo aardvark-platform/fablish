@@ -236,13 +236,13 @@ module Html =
         let inline onMouseClick x = onMouseEvent "onClick" x
         let inline onContextMenu x = onMouseEvent "oncontextmenu" x
         let inline onDblClick x = onMouseEvent "onDoubleClick" x
-        let inline onMouseDown x = onMouseEvent "onmousedown" x
-        let inline onMouseEnter x = onMouseEvent "onmouseenter" x
+        let inline onMouseDown x = onMouseEvent "onMouseDown" x
+        let inline onMouseEnter x = onMouseEvent "onMouseEnter" x
         let inline onMouseLeave x = onMouseEvent "onmouseleave" x
         let inline onMouseMove x = onMouseEvent "onmousemove" x
         let inline onMouseOut x = onMouseEvent "onmouseout" x
         let inline onMouseOver x = onMouseEvent "onmouseover" x
-        let inline onMouseUp x = onMouseEvent "onmouseup" x
+        let inline onMouseUp x = onMouseEvent "onMouseUp" x
         let inline onShow x = onMouseEvent "onshow" x
         let inline onKeyboardEvent eventType f = EventHandler (eventType, f)
         let inline onKeydown x = onKeyboardEvent "onkeydown" x
@@ -322,7 +322,7 @@ module Html =
     [<AutoOpen>]
     module Svg = 
         let svgNS = Attribute.Property("namespace","http://www.w3.org/2000/svg")
-        let inline svgElem tagName attrs children = Element((tagName, svgNS::attrs), children)
+        let inline svgElem tagName attrs children = Element((tagName, (*svgNS::*)attrs), children)
 
         let inline svg x = svgElem "svg" x
         let inline circle x = svgElem "circle" x 
