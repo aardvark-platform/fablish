@@ -210,7 +210,8 @@ module ToggleTest =
             | Inner a -> Toggle.update (Env.map Inner e) m a
 
     let view model =
-        div [] [
+        div [] [    
+            text "abc\\\\cde"
             input [onChange (fun s -> Toggle)] 
             Toggle.view model |> Html.map Inner
         ]
@@ -298,16 +299,14 @@ module SimpleDrawingApp =
              yield line [ "x1" => string edge.P0.X; "y1" => string edge.P0.Y; "x2" => string edge.P1.X; "y2" =>  string edge.P1.Y; "stroke" => "#023963" ] []
         ] 
 
-    let onClick = 
-        """function(ev) { 
-            var e = ev.target;
-            var dim = e.getBoundingClientRect();
-            var x = ev.clientX - dim.left;
-            var y = ev.clientY - dim.top;
-            return { x : ev.clientX, y : ev.clientY };
-        }"""
-
     type V2 = { x : int; y : int }
+
+    let clientClick, serverClick = 
+        """function(ev) { 
+            return { x : ev.clientX, y : ev.clientY };
+        }""", 
+        fun (str : string)  -> let v : V2 = Pickler.json.UnPickleOfString str in V3d(v.x,v.y,0)
+
 
     let readClick (str : string)   =
         let v : V2 = Pickler.json.UnPickleOfString str
@@ -316,23 +315,22 @@ module SimpleDrawingApp =
     let view (m : Model) = 
         div [] [
             svg [ width "640px"; height "480px" ; attribute "id" "svgThingy"
-                  ClientEvent("onClick", onClick, readClick >> AddPoint)
-                  ClientEvent("onMouseMove", onClick, readClick >> MoveCursor)
+                  ClientEvent("onClick", clientClick, serverClick >> AddPoint)
+                  ClientEvent("onMouseMove", clientClick, serverClick >> MoveCursor)
 
                   onDblClick (fun _ -> ClosePolygon)
 
-                  ClientEvent("onMouseDown", onClick, readClick >> Start) // for constant drawing
-                  onMouseUp (fun _ -> Stop) // for constant drawing
+                  ClientEvent("onMouseDown", clientClick, serverClick >> Start) // for constant drawing
+                  onMouseUp (fun _ -> Stop)                                     // clickPosition constant drawing
 
                   Callback("onKeyPress", "console.log('works')") // only works in combination with onRendered
                 ] [
+                    for p in m.finished |> List.rev do yield! viewPolygon p
 
-                for p in m.finished |> List.rev do yield! viewPolygon p
-
-                match m.working with
-                    | Some p when p.cursor.IsSome && p.finishedPoints |> List.isEmpty |> not -> 
-                        yield! viewPolygon (p.cursor.Value :: p.finishedPoints)
-                    | _ -> ()
+                    match m.working with
+                        | Some p when p.cursor.IsSome && p.finishedPoints |> List.isEmpty |> not -> 
+                            yield! viewPolygon (p.cursor.Value :: p.finishedPoints)
+                        | _ -> ()
             ]
         ]
 
@@ -341,7 +339,7 @@ module SimpleDrawingApp =
             clientSide = JsLambda """() => { 
                 //http://stackoverflow.com/questions/6747848/attaching-keyboard-events-to-an-svg-element-inside-html
                 var svgRect = document.getElementById("svgThingy");
-                svgRect.addEventListener('focus', function(){
+                svgRect.addEventListener('focus', function(){ // memory leak here.
                     this.addEventListener('keypress',function(e){
                         console.log(e.keyCode);
                     });
@@ -360,7 +358,7 @@ module SimpleDrawingApp =
             update = update
             view = view 
             subscriptions = Subscriptions.none
-            onRendered = onRendered
+            onRendered = OnRendered.ignore //onRendered
         }
 
 [<EntryPoint;STAThread>]
@@ -382,8 +380,8 @@ let main argv =
     // This one demonstrates nested subscriptions (Sub.map and app subscriptions for subscriptions to external events)
     //let app = SubscriptionNesting.app
 
-    let app = SimpleDrawingApp.app
-    //let app = ToggleTest.app
+    //let app = SimpleDrawingApp.app
+    let app = ToggleTest.app
 
     let runWindow = true        
 
