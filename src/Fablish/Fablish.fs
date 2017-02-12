@@ -65,31 +65,48 @@ module Fablish =
         let mutable currentRegistrations = Map.empty
         let mutable currentSubscription = Sub.NoSub
 
+        // memoized version of the view function (not thread safe)
+        let viewMemo =
+            let mutable lastModel = Unchecked.defaultof<_>
+            let mutable lastView = Unchecked.defaultof<_>
+            fun (m : 'model) -> 
+                if System.Object.ReferenceEquals(m,lastModel) then 
+                    Log.diagnostic "cached view result"
+                    Choice1Of2 lastView
+                else 
+                    lastModel <- m
+                    lastView <- app.view m
+                    Choice2Of2 lastView
+
         let send (model : 'model) =
             socket {
                 sw.Restart()
-                let view                   = app.view model 
-                let sub                    = app.subscriptions model
-                let vdom, registrations, s = render view
-                sw.Stop()
-                Log.diagnostic "rendering performed in %f milliseconds" sw.Elapsed.TotalMilliseconds
+                match viewMemo model with
+                    | Choice1Of2 lastView -> 
+                        // cache result 
+                        ()
+                    | Choice2Of2 view -> 
+                        let sub                    = app.subscriptions model
+                        let vdom, registrations, s = render view
+                        sw.Stop()
+                        Log.diagnostic "rendering performed in %f milliseconds" sw.Elapsed.TotalMilliseconds
 
-                let allSubscriptions = Sub.extract sub |> instance.SendSubs
-                currentSubscription <- sub
+                        let allSubscriptions = Sub.extract sub |> instance.SendSubs
+                        currentSubscription <- sub
 
-                let reaction = app.onRendered model view
-                let onRenderedEvt = s + 1
+                        let reaction = app.onRendered model view
+                        let onRenderedEvt = s + 1
 
-                let script =
-                    match reaction.clientSide with
-                        | JsLambda s -> s
-                        | Ignore -> ""
+                        let script =
+                            match reaction.clientSide with
+                                | JsLambda s -> s
+                                | Ignore -> ""
 
-                let bytes = { dom = vdom; script = script; id = string onRenderedEvt } |> Pickler.json.Pickle 
+                        let bytes = { dom = vdom; script = script; id = string onRenderedEvt } |> Pickler.json.Pickle 
 
-                Log.diagnostic "writing %f kb to client" (float bytes.Length / 1024.0)
-                do! webSocket.send Opcode.Text bytes true
-                currentRegistrations <- Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) registrations
+                        Log.diagnostic "writing %f kb to client" (float bytes.Length / 1024.0)
+                        do! webSocket.send Opcode.Text bytes true
+                        currentRegistrations <- Map.add onRenderedEvt (fun a -> reaction.serverSide (unbox a)) registrations
             }
 
         let rec tryReceiveChannel () = 
