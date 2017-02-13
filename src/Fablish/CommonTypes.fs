@@ -46,6 +46,7 @@ module CommonTypes =
 
         let seconds = TimeSpan.FromSeconds 1.0
         let every (interval : TimeSpan) (f : DateTime -> 'msg) = TimeSub(interval,f)
+        let everyMs ms = every (TimeSpan.FromMilliseconds ms)
 
 
     type Env<'msg> = { run : Cmd<'msg> -> unit }

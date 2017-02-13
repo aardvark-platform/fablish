@@ -1,5 +1,6 @@
 ﻿module Program
 
+open Examples
 open System
 open System.Windows.Forms
 
@@ -382,6 +383,8 @@ let main argv =
 
     //let app = SimpleDrawingApp.app
     let app = ToggleTest.app
+
+    let app = RadialDiagram.app
 
     let runWindow = true        
 

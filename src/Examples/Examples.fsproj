@@ -54,6 +54,7 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
+    <Compile Include="Experiments.fs" />
     <Compile Include="Program.fs" />
     <None Include="paket.references" />
     <None Include="Interactive.fsx" />

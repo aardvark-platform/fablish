@@ -69,6 +69,7 @@
     <Compile Include="CommonTypes.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="Types.fs" />
+    <Compile Include="Components.fs" />
     <Compile Include="Fablish.fs" />
     <Compile Include="Fablish.UI.Primitives.fs" />
     <Compile Include="Fablish.UI.SemanticUI.fs" />

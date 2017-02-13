@@ -13,6 +13,10 @@ module Fablish =
     open System.Threading
     open System.Net
 
+
+    open Fable.Helpers.Virtualdom
+    open Fable.Helpers.Virtualdom.Html
+
     open Suave
     open Suave.Sockets
     open Suave.Operators
@@ -25,9 +29,6 @@ module Fablish =
 
     open Aardvark.Base
     open Aardvark.Base.Incremental
-
-    open Fable.Helpers.Virtualdom
-    open Fable.Helpers.Virtualdom.Html
 
     open Aardvark.Base.Monads.State
 
