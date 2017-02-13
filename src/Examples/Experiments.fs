@@ -75,10 +75,10 @@ module RadialDiagram =
             circle [ cx (string center.X); cy (string center.Y); r (string radius); "stroke" => "black";  "strokeDasharray" => "1,1"; "fill" => "none"; "strokeWidth" => "0.1"] []
 
         let circles = 
-            [ for i in 0 .. 5 .. 20 do yield circle center ((float i / 20.0) * radius) ]
+            [ for i in 5 .. 5 .. 20 do yield circle center ((float i / 20.0) * radius) ]
 
         let segment i (k,v) =                    
-            let f = v / 17.0
+            let f = v / 20.0
             let scale = f * radius
             let color = if i%2 = 0 then "fill" => "#D2F4FF" else "fill" => "#76E783"
             let p =  (float i / (float count)) * System.Math.PI * 2.0
@@ -88,7 +88,7 @@ module RadialDiagram =
             [
                 line [ "x1" =>  ~~center.X; "y1" => ~~center.Y; "x2" => ~~(x p 1.0); "y2" => ~~(y p 1.0); "stroke" => "black"; "strokeWidth" => "0.1"; "strokeDasharray" => "1,1" ] []
                 path [ "d" => sprintf "M %d %d L %f %f A %f %f 0 0 1 %f %f L %d %d" center.X center.Y (x p f) (y p f) scale scale (x next f) (y next f) center.X center.Y; color;] []
-                path [ "d" => sprintf "M %f %f A %d %d 0 0 1 %f %f"  (x p 1.0) (y p 1.0) center.X center.Y  (x next 1.0) (y next 1.0); "stroke" => "green"; "id" => sprintf "%s" k; "visibility" => "hidden"] [ ]
+                path [ "d" => sprintf "M %f %f A %d %d 0 0 1 %f %f"  (x p 1.05) (y p 1.05) center.X center.Y  (x next 1.05) (y next 1.05); "stroke" => "green"; "id" => sprintf "%s" k; "visibility" => "hidden"] [ ]
             ]
 
         div [] [
@@ -98,9 +98,9 @@ module RadialDiagram =
                 match model.animation with
                     | Some (_,(current,_),_) -> yield! current |> List.mapi segment |> List.concat
                     | _ ->  yield! model.values |> fst |> List.mapi segment |> List.concat
-                yield Svg.svgElem "text" ["font-family" => "Verdana"; "fontSize" => "3.5" ] [
+                yield Svg.svgElem "text" ["font-family" => "Verdana"; "fontSize" => "3.5"; "textAnchor" => "middle" ] [
                     for (k,v) in model.values |> fst do
-                        yield Svg.svgElem "textPath" ["xlinkHref" => sprintf "#%s" k] [text (string k)]
+                        yield Svg.svgElem "textPath" ["startOffset" => "50%"; "xlinkHref" => sprintf "#%s" k] [text (string k)]
                 ]
             ]
             button [onMouseClick (fun _ -> StartTween twentytwelf)] [text "2012"]
