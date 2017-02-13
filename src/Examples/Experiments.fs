@@ -49,6 +49,7 @@ module RadialDiagram =
         List.map2 (fun (k,v) (_,v')-> (k,v + (v'-v)*alpha)) original target
 
     let update e model msg =
+        printfn "rock it."
         match msg with
             | StartTween d -> { model with animation = Some (0.0,model.values,d) }
             | TimeStep ms -> 
@@ -94,7 +95,6 @@ module RadialDiagram =
         div [] [
             text "testing animation and svg"
             svg [ viewBox "0 0 120 120"; width "500px";  ] [
-                yield! circles
                 match model.animation with
                     | Some (_,(current,_),_) -> yield! current |> List.mapi segment |> List.concat
                     | _ ->  yield! model.values |> fst |> List.mapi segment |> List.concat
@@ -102,6 +102,7 @@ module RadialDiagram =
                     for (k,v) in model.values |> fst do
                         yield Svg.svgElem "textPath" ["startOffset" => "50%"; "xlinkHref" => sprintf "#%s" k] [text (string k)]
                 ]
+                yield! circles
             ]
             button [onMouseClick (fun _ -> StartTween twentytwelf)] [text "2012"]
             button [onMouseClick (fun _ -> StartTween nineteen10)] [text "1912"]
