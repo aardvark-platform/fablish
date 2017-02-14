@@ -26,6 +26,8 @@ NUGET
     FSharp.Compiler.Service (8.0)
       System.Collections.Immutable (>= 1.2.0)
       System.Reflection.Metadata (>= 1.4.1-beta-24227-04)
+    FSharp.Data (2.3.2)
+      Zlib.Portable (>= 1.11.0) - framework: portable-net45+sl5+win8, portable-net45+win8, portable-net45+win8+wp8+wpa81
     FsPickler (3.2)
     FsPickler.Json (3.2)
       FsPickler (3.2.0)
@@ -184,6 +186,7 @@ NUGET
     System.Threading.Timer (4.3.0) - framework: net10, net11, net20, net35, net40, net40-full
     System.Xml.ReaderWriter (4.3.0) - framework: net10, net11
     System.Xml.XDocument (4.3.0) - framework: net10, net11
+    Zlib.Portable (1.11.0) - framework: portable-net45+sl5+win8, portable-net45+win8, portable-net45+win8+wp8+wpa81
 
 GROUP Build
 CONTENT: NONE
