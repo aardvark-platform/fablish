@@ -384,7 +384,7 @@ let main argv =
     //let app = SimpleDrawingApp.app
     let app = ToggleTest.app
 
-    let app = RadialDiagram.app
+    let app = AngularHistogram.app
 
     let runWindow = true        
 

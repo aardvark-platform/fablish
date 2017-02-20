@@ -132,9 +132,13 @@ module AngularHistogram =
     open Fable.Helpers.Virtualdom.Html
     open FSharp.Data
 
-    type Measures = CsvProvider<"C:\Users\ortner\Desktop\cape_desire.csv">
-
-    let capeDesire = Measures.Load("C:\Users\ortner\Desktop\cape_desire.csv")
+    type Measures = CsvProvider<"cape_desire.csv">
+   
+    let measurements = [
+        Measures.Load("C:\Users\ortner\Desktop\cape_desire.csv")
+        Measures.Load("C:\Users\ortner\Desktop\garden_city.csv")
+        Measures.Load("C:\Users\ortner\Desktop\unnamed_sol318.csv")
+    ]
     
     module Binning =
         
@@ -158,44 +162,45 @@ module AngularHistogram =
             for i in indices do
                 buckets <- List.updateAt i (fun x -> x + 1) buckets
 
-            buckets |> List.toSeq |> Seq.map (fun x -> float x)
+            let maxBucket = buckets |> Seq.max
+            buckets |> List.toSeq |> Seq.map (fun x -> float x / float maxBucket)
                        
     let radToDeg r = (r * 180.0) / System.Math.PI
     let degToRad d = (d * System.Math.PI) / 180.0
 
-    let buckets = 12
-    let keys = ["N";"30°";"60°";"E";"120°";"150°";"S";"210°";"240°";"W";"300°";"330°"]
-    
-    let angles = capeDesire.Rows 
+    let buckets = 24   
+    let angleLabel angle =
+        match angle with
+            | 0 -> "N"
+            | 90 -> "E"
+            | 180 -> "S"
+            | 270 -> "W"
+            | _ -> sprintf "%A°"angle
+
+    let generateLabels noOfbuckets =
+        let step = 360 / noOfbuckets
+        let angles = [0 .. step .. 360]
+        angles |> List.map (fun x -> angleLabel x)
+
+    let makeData rows =
+        rows
+         |> Seq.filter (fun (x : Measures.Row) -> x.MeasurementType = "DipAndStrike") 
+         |> Seq.map (fun x -> (x.DipAzimuth)) |> Binning.halfShift buckets
+
+    let angles2 = measurements |> Seq.map (fun s -> makeData s.Rows)
+
+    let angles = measurements.[0].Rows
                     |> Seq.filter (fun x -> x.MeasurementType = "DipAndStrike") 
                     |> Seq.map (fun x -> (x.DipAzimuth)) |> Binning.halfShift buckets
 
-    for a in angles do
-        printfn "azimuth: (%A)" a
-
-    let nineteen10' = angles |> Binning.indices buckets |> Binning.bin buckets |> Seq.mapi (fun i x -> (keys.[i],x)) |> Seq.toList
-    let nineteen10 = nineteen10', 1910    
+    let keys = generateLabels buckets
+    let dipData' = angles |> Binning.indices buckets |> Binning.bin buckets |> Seq.mapi (fun i x -> (keys.[i],x)) |> Seq.toList
+    let dipData = dipData', 1910    
      
     type Data = list<string * float> * int
     type Model = { values : Data; animation : Option<float * Data * Data> }
 
     // wrongly taken from: http://prcweb.co.uk/radialbarchart/
-
-//    let nineteen10 = 
-//        [
-//            "N",    2.6
-//            "30°",  3.9
-//            "60°",  5.4
-//            "E",    6.0
-//            "120°", 10.1
-//            "150°", 13.3
-//            "S",    13.2
-//            "210°", 14.1
-//            "240°", 11.8
-//            "W",    9.9
-//            "300°", 2.8
-//            "330°", 5.5
-//         ], 1910
 
     let twentytwelf =
         [
@@ -244,21 +249,22 @@ module AngularHistogram =
         let halfOffset = System.Math.PI / float count
 
         let circle (center : V2i) (radius : float) =
-            circle [ cx (string center.X); cy (string center.Y); r (string radius); "stroke" => "black";  "strokeDasharray" => "1,1"; "fill" => "none"; "strokeWidth" => "0.1"] []
+            circle [ cx (string center.X); cy (string center.Y); r (string radius); "stroke" => "black"; "fill" => "none"; "strokeWidth" => "0.1"] []
 
         let circles = 
             [ for i in 5 .. 5 .. 20 do yield circle center ((float i / 20.0) * radius) ]
 
         let segment i (k,v) =                    
-            let f = v / 20.0
+            let f = v
             let scale = f * radius
-            let color = if i%2 = 0 then "fill" => "#D2F4FF" else "fill" => "#76E783"            
+            let color = "fill" => "#AAAAAA" // if i%2 = 0 then "fill" => "#D2F4FF" else "fill" => "#76E783"            
             let p =  (float i / (float count)) * System.Math.PI * 2.0 - halfOffset
             let next =  (float (i+1) / (float count)) * System.Math.PI * 2.0 - halfOffset
             let x a max = sin a * (max * radius) + float center.X
             let y a max = float center.Y - cos a * (max * radius)
             [
-                line [ "x1" =>  ~~center.X; "y1" => ~~center.Y; "x2" => ~~(x p 1.0); "y2" => ~~(y p 1.0); "stroke" => "black"; "strokeWidth" => "0.1"; "strokeDasharray" => "1,1" ] []
+                line [ "x1" =>  ~~center.X; "y1" => ~~center.Y; "x2" => ~~(x p 1.0); "y2" => ~~(y p 1.0);
+                       "stroke" => "black"; "strokeWidth" => "0.1";] [] 
                 path [ "d" => sprintf "M %d %d L %f %f A %f %f 0 0 1 %f %f L %d %d" center.X center.Y (x p f) (y p f) scale scale (x next f) (y next f) center.X center.Y; color;] []
                 path [ "d" => sprintf "M %f %f A %d %d 0 0 1 %f %f"  (x p 1.05) (y p 1.05) center.X center.Y  (x next 1.05) (y next 1.05); "stroke" => "green"; "id" => sprintf "%s" k; "visibility" => "hidden"] [ ]
             ]
@@ -276,7 +282,7 @@ module AngularHistogram =
                 yield! circles
             ]
             button [onMouseClick (fun _ -> StartTween twentytwelf)] [text "2012"]
-            button [onMouseClick (fun _ -> StartTween nineteen10)] [text "1912"]
+            button [onMouseClick (fun _ -> StartTween dipData)] [text "capeDesire"]
         ]
 
     let subscriptions m =
@@ -284,7 +290,7 @@ module AngularHistogram =
             | Some _ ->  Time.everyMs 10.0 (fun _ -> TimeStep 10.0)
             | _ -> Sub.none
 
-    let initial = { values = nineteen10; animation = None }
+    let initial = { values = dipData; animation = None }
 
     let app =  
         {
