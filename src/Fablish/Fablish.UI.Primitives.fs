@@ -41,6 +41,7 @@ type Numeric = {
     min   : float
     max   : float
     step  : float
+    format: string
 }
 
 type Choice = {     
@@ -98,7 +99,58 @@ module Numeric =
     open Aardvark.Base
 
     let numeric f =
-        { value = f; min = Double.MinValue; max = Double.MaxValue; step = 0.1 }
+        { value = f; min = Double.MinValue; max = Double.MaxValue; step = 0.1; format = "{0:0.00}" }
+
+    type Model = Numeric
+
+    type Action = 
+        | Set of string
+
+    let update env (model : Model) (action : Action) =
+        match action with
+            | Set s     ->
+                let parsed = 0.0
+                match Double.TryParse(s, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture) with
+                    | (true,v) -> { model with value = Fun.Clamp(v, model.min, model.max) }
+                    | _ -> 
+                        printfn "validation failed: %s" s
+                        model    
+
+    let view (model : Model) : DomNode<Action> =
+            div [clazz "ui input"] [
+                input [
+                    Style ["textAlign","right"]
+                    attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value)) // custom number formatting
+                    attribute "type" "number"; 
+                    attribute "step" (sprintf "%f" model.step)
+                    attribute "min" (sprintf "%f" model.min)
+                    attribute "max" (sprintf "%f" model.max)
+                    onChange (fun s -> Set (unbox s))
+                ]
+            ]                                  
+
+    let initial = {
+        value   = 0.0
+        min     = 1.0
+        max     = 10.0
+        step    = 1.0
+        format  = "{0:0.00}"
+    }
+
+    let app = {
+        initial = initial
+        update = update
+        view = view
+        subscriptions = Subscriptions.none
+        onRendered = OnRendered.ignore
+    }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module NumericOld = 
+    open Aardvark.Base
+
+    let numeric f =
+        { value = f; min = Double.MinValue; max = Double.MaxValue; step = 0.1; format = "{0:0.00}" }
 
     type Model = Numeric
 
@@ -139,6 +191,7 @@ module Numeric =
         min     = -1.0
         max     = 5.0
         step    = 0.5
+        format  = "{0:0.00}"
     }
 
     let app = {
