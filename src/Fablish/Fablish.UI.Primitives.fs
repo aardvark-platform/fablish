@@ -70,31 +70,46 @@ module DomHelpers =
             Pickler.json.UnPickleOfString str / Aardvark.Base.V2d(-100.0,-100.0) // up is down in mouse wheel events
 
         ClientEvent("onWheel", clientClick, serverClick >> f)
-        
+    
+    type BoxOrSlider = 
+        | Slider
+        | InputBox
 
-    let numericField set model = 
-        elem "input" [
-            attribute "id" "myInput"
+    let numericField set model boxOrSlider = 
+        input [
             Style ["textAlign","right";]
             attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value)) // custom number formatting
-            attribute "type" "number"; 
+            attribute "type" (match boxOrSlider with | Slider -> "range"; | InputBox -> "number") 
             attribute "step" (sprintf "%f" model.step)
             attribute "min" (sprintf "%f" model.min)
             attribute "max" (sprintf "%f" model.max)
             onWheel (fun d -> model.value + (d.Y * model.step) |> string |> set)
             onChange (unbox >> set)
-        ] []
-        
-    let numericSlider set model = 
-           input [
-                Style ["textAlign","right"]
-                attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value))
-                attribute "type" "range"; 
-                attribute "step" (sprintf "%f" model.step)
-                attribute "min" (sprintf "%f" model.min)
-                attribute "max" (sprintf "%f" model.max)
-                onChange (fun s -> set (unbox s))
-            ] 
+        ] 
+
+//    let numericField set model = 
+//        input [
+//            Style ["textAlign","right";]
+//            attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value)) // custom number formatting
+//            attribute "type" "number"; 
+//            attribute "step" (sprintf "%f" model.step)
+//            attribute "min" (sprintf "%f" model.min)
+//            attribute "max" (sprintf "%f" model.max)
+//            onWheel (fun d -> model.value + (d.Y * model.step) |> string |> set)
+//            onChange (unbox >> set)
+//        ] 
+//        
+//    let numericSlider set model = 
+//           input [
+//                Style ["textAlign","right"]
+//                attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value))
+//                attribute "type" "range"; 
+//                attribute "step" (sprintf "%f" model.step)
+//                attribute "min" (sprintf "%f" model.min)
+//                attribute "max" (sprintf "%f" model.max)
+//                onChange (fun s -> set (unbox s))
+//                onWheel (fun d -> model.value + (d.Y * model.step) |> string |> set)
+//            ] 
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Text = 
@@ -158,18 +173,18 @@ module Numeric =
     let view' (inputType : InputType) (model : Model) : DomNode<Action> =
         div [] [
             match inputType with 
-            | Slider ->    yield numericSlider Set model 
-            | InputBox ->  yield numericField Set model
-            | Both -> yield numericSlider Set model; yield text" "; yield numericField Set model
+            | Slider ->    yield numericField Set model BoxOrSlider.Slider
+            | InputBox ->  yield numericField Set model BoxOrSlider.InputBox
+            | Both -> yield numericField Set model BoxOrSlider.Slider; yield text" "; yield numericField Set model BoxOrSlider.InputBox
         ]   
                 
     let view = view' InputBox               
                                  
     let initial = {
-        value   = 1.0
+        value   = 3.0
         min     = 0.0
-        max     = 10.0
-        step    = 1.0
+        max     = 15.0
+        step    = 1.5
         format  = "{0:0.00}"
     }
 
@@ -181,7 +196,7 @@ module Numeric =
         onRendered = OnRendered.ignore
     }
 
-    let app = app' InputBox
+    let app = app' InputType.InputBox
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module NumericOld = 

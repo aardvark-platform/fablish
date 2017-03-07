@@ -385,7 +385,7 @@ let main argv =
 //    let app = ToggleTest.app
 //
 //    let app = AngularHistogram.app
-    let app = Numeric.app' Numeric.Both
+    let app = Numeric.app' Numeric.InputType.Both
 
     let runWindow = true        
 
