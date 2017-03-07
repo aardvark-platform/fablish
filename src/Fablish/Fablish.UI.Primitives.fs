@@ -6,28 +6,6 @@ open Suave
 open Fable.Helpers.Virtualdom
 open Fable.Helpers.Virtualdom.Html
 
-[<AutoOpen>]
-module DomHelpers =
-    let clazz v = attribute "className" v
-
-    let container c = div [clazz "ui container"] c
-
-    let labelled label c = 
-        container [ div [clazz "ui label"] [ text label ]; c ]
-
-    let accordion text' icon active content' =
-        let title = if active then "title active" else "title"
-        let content = if active then "content active" else "content"
-        div [clazz "ui accordion fluid"] [
-            div [clazz title] [
-                    a [clazz "ui label large"] [
-                        i [clazz (icon + " icon circular inverted")] []
-                        text text'
-                    ]
-            ]
-            div [clazz content] content'
-        ]
-
 type Toggle = {
     isActive : bool        
 }
@@ -61,6 +39,62 @@ type Transformation = {
     scale       : Vector3d
 }
 
+[<AutoOpen>]
+module DomHelpers =
+    let clazz v = attribute "className" v
+
+    let container c = div [clazz "ui container"] c
+
+    let labelled label c = 
+        container [ div [clazz "ui label"] [ text label ]; c ]
+
+    let accordion text' icon active content' =
+        let title = if active then "title active" else "title"
+        let content = if active then "content active" else "content"
+        div [clazz "ui accordion fluid"] [
+            div [clazz title] [
+                    a [clazz "ui label large"] [
+                        i [clazz (icon + " icon circular inverted")] []
+                        text text'
+                    ]
+            ]
+            div [clazz content] content'
+        ]
+
+    let onWheel (f : Aardvark.Base.V2d -> 'msg) =
+        let clientClick = 
+            """function(ev) { 
+                return { X : ev.deltaX.toFixed(), Y : ev.deltaY.toFixed() };
+            }"""
+        let serverClick (str : string) : Aardvark.Base.V2d = 
+            Pickler.json.UnPickleOfString str / Aardvark.Base.V2d(-100.0,-100.0) // up is down in mouse wheel events
+
+        ClientEvent("onWheel", clientClick, serverClick >> f)
+        
+
+    let numericField set model = 
+        elem "input" [
+            attribute "id" "myInput"
+            Style ["textAlign","right";]
+            attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value)) // custom number formatting
+            attribute "type" "number"; 
+            attribute "step" (sprintf "%f" model.step)
+            attribute "min" (sprintf "%f" model.min)
+            attribute "max" (sprintf "%f" model.max)
+            onWheel (fun d -> model.value + (d.Y * model.step) |> string |> set)
+            onChange (unbox >> set)
+        ] []
+        
+    let numericSlider set model = 
+           input [
+                Style ["textAlign","right"]
+                attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value))
+                attribute "type" "range"; 
+                attribute "step" (sprintf "%f" model.step)
+                attribute "min" (sprintf "%f" model.min)
+                attribute "max" (sprintf "%f" model.max)
+                onChange (fun s -> set (unbox s))
+            ] 
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Text = 
@@ -102,9 +136,14 @@ module Numeric =
         { value = f; min = Double.MinValue; max = Double.MaxValue; step = 0.1; format = "{0:0.00}" }
 
     type Model = Numeric
-
+    
     type Action = 
         | Set of string
+
+    type InputType = 
+        | Slider
+        | InputBox
+        | Both
 
     let update env (model : Model) (action : Action) =
         match action with
@@ -116,34 +155,33 @@ module Numeric =
                         printfn "validation failed: %s" s
                         model    
 
-    let view (model : Model) : DomNode<Action> =
-            div [clazz "ui input"] [
-                input [
-                    Style ["textAlign","right"]
-                    attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value)) // custom number formatting
-                    attribute "type" "number"; 
-                    attribute "step" (sprintf "%f" model.step)
-                    attribute "min" (sprintf "%f" model.min)
-                    attribute "max" (sprintf "%f" model.max)
-                    onChange (fun s -> Set (unbox s))
-                ]
-            ]                                  
-
+    let view' (inputType : InputType) (model : Model) : DomNode<Action> =
+        div [] [
+            match inputType with 
+            | Slider ->    yield numericSlider Set model 
+            | InputBox ->  yield numericField Set model
+            | Both -> yield numericSlider Set model; yield text" "; yield numericField Set model
+        ]   
+                
+    let view = view' InputBox               
+                                 
     let initial = {
-        value   = 0.0
-        min     = 1.0
+        value   = 1.0
+        min     = 0.0
         max     = 10.0
         step    = 1.0
         format  = "{0:0.00}"
     }
 
-    let app = {
+    let app' t = {
         initial = initial
         update = update
-        view = view
+        view = view' t
         subscriptions = Subscriptions.none
         onRendered = OnRendered.ignore
     }
+
+    let app = app' InputBox
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module NumericOld = 
@@ -221,20 +259,20 @@ module Vector3d =
 
     let view (model : Model) : DomNode<Action> =
         table [clazz "ui celled table"] [
-                    tbody [] [
-                        tr [] [
-                            td [clazz "collapsing"] [text "X:"];
-                            td [clazz "right aligned"] [Numeric.view model.x |> Html.map Set_X]
-                        ]
-                        tr [] [
-                            td [clazz "collapsing"] [text "Y:"];
-                            td [clazz "right aligned"] [Numeric.view model.y |> Html.map Set_Y]
-                        ]
-                        tr [] [
-                            td [clazz "collapsing"] [text "Z:"];
-                            td [clazz "right aligned"] [Numeric.view model.z |> Html.map Set_Z]
-                        ]
-                    ]
+            tbody [] [
+                tr [] [
+                    td [clazz "collapsing"] [text "X:"];
+                    td [clazz "right aligned"] [Numeric.view model.x |> Html.map Set_X]
+                ]
+                tr [] [
+                    td [clazz "collapsing"] [text "Y:"];
+                    td [clazz "right aligned"] [Numeric.view model.y |> Html.map Set_Y]
+                ]
+                tr [] [
+                    td [clazz "collapsing"] [text "Z:"];
+                    td [clazz "right aligned"] [Numeric.view model.z |> Html.map Set_Z]
+                ]
+            ]
         ]
 
     let initial = {
@@ -373,7 +411,6 @@ module Toggle =
         div [clazz "ui toggle checkbox"] [
             input [attribute "type" "checkbox"; attribute "checked" active'; onMouseClick(fun _ -> Toggle)]
             label [] [text ""]
-            
         ]     
         
     let initial = { isActive = false }

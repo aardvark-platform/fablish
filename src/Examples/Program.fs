@@ -370,7 +370,7 @@ let main argv =
     // set verbosity (currently we have diagnostic and info where info is minimal info and diagnostic is rather chatty)
     //Fablish.Utils.Log.verbosity <- Fablish.Utils.Verbosity.Diagnostic
 
-    let app = PerformanceTest.app
+    //let app = PerformanceTest.app
 
     // this one demonstrates asynchronous messages (Env and Env.map) as well as html renderer feedback (onRendered) in order to use bounds of a html element.
     //let app = NestingApp.app
@@ -382,9 +382,10 @@ let main argv =
     //let app = SubscriptionNesting.app
 
     //let app = SimpleDrawingApp.app
-    let app = ToggleTest.app
-
-    let app = AngularHistogram.app
+//    let app = ToggleTest.app
+//
+//    let app = AngularHistogram.app
+    let app = Numeric.app' Numeric.Both
 
     let runWindow = true        
 
