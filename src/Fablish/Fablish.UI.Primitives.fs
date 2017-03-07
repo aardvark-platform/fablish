@@ -71,15 +71,15 @@ module DomHelpers =
 
         ClientEvent("onWheel", clientClick, serverClick >> f)
     
-    type BoxOrSlider = 
+    type InputType = 
         | Slider
         | InputBox
 
-    let numericField set model boxOrSlider = 
+    let numericField set model inputType = 
         input [
             Style ["textAlign","right";]
             attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value)) // custom number formatting
-            attribute "type" (match boxOrSlider with | Slider -> "range"; | InputBox -> "number") 
+            attribute "type" (match inputType with | Slider -> "range"; | InputBox -> "number") 
             attribute "step" (sprintf "%f" model.step)
             attribute "min" (sprintf "%f" model.min)
             attribute "max" (sprintf "%f" model.max)
@@ -87,29 +87,13 @@ module DomHelpers =
             onChange (unbox >> set)
         ] 
 
-//    let numericField set model = 
-//        input [
-//            Style ["textAlign","right";]
-//            attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value)) // custom number formatting
-//            attribute "type" "number"; 
-//            attribute "step" (sprintf "%f" model.step)
-//            attribute "min" (sprintf "%f" model.min)
-//            attribute "max" (sprintf "%f" model.max)
-//            onWheel (fun d -> model.value + (d.Y * model.step) |> string |> set)
-//            onChange (unbox >> set)
-//        ] 
-//        
-//    let numericSlider set model = 
-//           input [
-//                Style ["textAlign","right"]
-//                attribute "value" (String.Format(Globalization.CultureInfo.InvariantCulture, model.format, model.value))
-//                attribute "type" "range"; 
-//                attribute "step" (sprintf "%f" model.step)
-//                attribute "min" (sprintf "%f" model.min)
-//                attribute "max" (sprintf "%f" model.max)
-//                onChange (fun s -> set (unbox s))
-//                onWheel (fun d -> model.value + (d.Y * model.step) |> string |> set)
-//            ] 
+module List =
+    /// The intersperse function takes an element and a list and
+    /// 'intersperses' that element between the elements of the list.
+    let intersperse sep ls =
+        List.foldBack (fun x -> function
+            | [] -> [x]
+            | xs -> x::sep::xs) ls []
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Text = 
@@ -144,6 +128,39 @@ module Text =
     }
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Color = 
+    type Model = 
+        {
+            colorString : string
+        }
+    type Action = 
+        | Set of string
+
+    let update env (model : Model) (action : Action) =
+        match action with
+            | Set s     ->  printfn "color string: %s" s
+                            { model with colorString = s}    
+
+    let view (model : Model) : DomNode<Action> =  
+        input [
+            attribute "value" model.colorString
+            attribute "type" "color"; 
+            onChange (fun s -> Set (unbox s))
+        ]          
+
+    let initial = {
+        colorString   = "#ff0000"
+    }
+
+    let app = {
+        initial = initial
+        update = update
+        view = view
+        subscriptions = Subscriptions.none
+        onRendered = OnRendered.ignore
+    }
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Numeric = 
     open Aardvark.Base
 
@@ -155,11 +172,6 @@ module Numeric =
     type Action = 
         | Set of string
 
-    type InputType = 
-        | Slider
-        | InputBox
-        | Both
-
     let update env (model : Model) (action : Action) =
         match action with
             | Set s     ->
@@ -170,15 +182,13 @@ module Numeric =
                         printfn "validation failed: %s" s
                         model    
 
-    let view' (inputType : InputType) (model : Model) : DomNode<Action> =
-        div [] [
-            match inputType with 
-            | Slider ->    yield numericField Set model BoxOrSlider.Slider
-            | InputBox ->  yield numericField Set model BoxOrSlider.InputBox
-            | Both -> yield numericField Set model BoxOrSlider.Slider; yield text" "; yield numericField Set model BoxOrSlider.InputBox
-        ]   
+    let view' (inputTypes : list<InputType>) (model : Model) : DomNode<Action> =
+        inputTypes 
+            |> List.map (numericField Set model) 
+            |> List.intersperse (text " ") 
+            |> div []
                 
-    let view = view' InputBox               
+    let view = view' [InputBox]
                                  
     let initial = {
         value   = 3.0
@@ -196,7 +206,7 @@ module Numeric =
         onRendered = OnRendered.ignore
     }
 
-    let app = app' InputType.InputBox
+    let app = app' [InputType.InputBox; InputType.InputBox; InputType.Slider]
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module NumericOld = 

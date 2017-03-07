@@ -383,13 +383,18 @@ let main argv =
 
     //let app = SimpleDrawingApp.app
 //    let app = ToggleTest.app
-//
+// 
 //    let app = AngularHistogram.app
-    let app = Numeric.app' Numeric.InputType.Both
+    let app = Numeric.app
+
+    //let app = RadialDiagram.app
+
+    //let app = Color.app
 
     let runWindow = true        
 
     if runWindow then
+        //let browser = WinForms.runControl "8083" app
         let browser = Chromium.runControl "8083" app
         use w = new Form()
         w.Controls.Add browser
