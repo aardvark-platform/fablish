@@ -33,6 +33,13 @@ type Vector3d = {
     z : Numeric
 }
 
+type Color4d = {
+    r : Numeric
+    g : Numeric
+    b : Numeric
+    a : Numeric
+}
+
 type Transformation = {
     translation : Vector3d
     rotation    : Vector3d
@@ -129,27 +136,47 @@ module Text =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Color = 
-    type Model = 
-        {
-            colorString : string
-        }
+    type Model = Color4d
+
     type Action = 
         | Set of string
 
     let update env (model : Model) (action : Action) =
         match action with
-            | Set s     ->  printfn "color string: %s" s
-                            { model with colorString = s}    
+            | Set s     ->  //printfn "color string: %s" s
+                            let values = ((s.Split([|'('|])).[1]).Split([|')'|]).[0].Split([|','|])
+                            let output = values |> Seq.ofArray |> Seq.map (fun i -> Double.Parse(i, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture)) |> Seq.toArray
+                            {model with r = {model.r with value = output.[0]}
+                                        g = {model.g with value = output.[1]}
+                                        b = {model.b with value = output.[2]}
+                                        a = {model.a with value = output.[3]}}
 
     let view (model : Model) : DomNode<Action> =  
-        input [
-            attribute "value" model.colorString
-            attribute "type" "color"; 
-            onChange (fun s -> Set (unbox s))
-        ]          
+        input [ attribute "className" "color no-alpha"; onChange (fun s -> Set (unbox s))] // use (className "color no-alpha") to deactivate alpha channel, BUT SLOW OPENING after several changes...!! 
+
+    let rgbInitValue = 
+        {
+            value   = 0.0
+            min     = 0.0
+            max     = 255.0
+            step    = 1.0
+            format  = "{0:0}"
+        }
+
+    let aInitValue = 
+        {
+            value   = 1.0
+            min     = 0.0
+            max     = 1.0
+            step    = (1.0/255.0)
+            format  = "{0:0.00}"
+        }
 
     let initial = {
-        colorString   = "#ff0000"
+            r = rgbInitValue
+            g = rgbInitValue
+            b = rgbInitValue
+            a = aInitValue
     }
 
     let app = {

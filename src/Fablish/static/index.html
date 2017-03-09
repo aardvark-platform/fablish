@@ -16,7 +16,9 @@
 
 
     <script src="https://cdn.rawgit.com/olton/Metro-UI-CSS/master/build/js/metro.min.js"></script>
-
+    
+<!--    <script src="https://cdn.rawgit.com/PitPik/colorPicker/41d780c3/jQuery_implementation/jQueryColorPicker.min.js"></script>-->
+    <script src="https://cdn.rawgit.com/PitPik/tinyColorPicker/999178d0/jqColorPicker.min.js"></script>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.css">
     <script src="https://cdn.jsdelivr.net/semantic-ui/2.2.6/semantic.min.js"></script>
@@ -86,6 +88,32 @@
                 $('.menu .item').tab();
                 $('.ui.modal').modal();
 
+                var sendingChange = false;
+
+                ////// https://github.com/PitPik/colorPicker/tree/master/jQuery_implementation
+                $('.color').colorPicker({
+                    //opacity: true,          // enable / disable alpha slider // should be handled by "no-alpha"
+                    forceAlpha: true,       // alpha is allways in message included ([0..1])
+                    animationSpeed: 150,    // animationspeed
+                    buildCallback: function($elm){
+                        this.$alpha = $elm.find('.cp-alpha');
+                    },
+                    renderCallback: function ($elm, toggled) {
+                        if (toggled === true) { // on show colorPicker
+                            this.$alpha.toggle(!$elm.hasClass('no-alpha'));
+                        } else {
+                            var el = $elm.get(0);
+                            // complex color information
+                            var colors = this.color.colors;
+                            //// Manually trigger update change
+                            if (!sendingChange) {
+                                sendingChange = true;
+                                el.dispatchEvent(new Event('input', { bubbles: true })); // sends HTML-String like: rgba(123, 234, 0, 0.89)
+                                sendingChange = false;
+                            }
+                        }
+                    }
+                }); 
              };
 
             function sendRefresh() {
