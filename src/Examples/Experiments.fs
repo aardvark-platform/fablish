@@ -115,7 +115,7 @@ module RadialDiagram =
 
     let initial = { values = nineteen10; animation = None }
 
-    let app =  
+    let app () =  
         {
             initial = initial
             update = update
@@ -134,7 +134,7 @@ module AngularHistogram =
 
     type Measures = CsvProvider<"cape_desire.csv">
    
-    let measurements = [
+    let measurements () = [
         Measures.Load("C:\Users\ortner\Desktop\cape_desire.csv")
         Measures.Load("C:\Users\ortner\Desktop\garden_city.csv")
         Measures.Load("C:\Users\ortner\Desktop\unnamed_sol318.csv")
@@ -187,15 +187,15 @@ module AngularHistogram =
          |> Seq.filter (fun (x : Measures.Row) -> x.MeasurementType = "DipAndStrike") 
          |> Seq.map (fun x -> (x.DipAzimuth)) |> Binning.halfShift buckets
 
-    let angles2 = measurements |> Seq.map (fun s -> makeData s.Rows)
+    let angles2 () = measurements () |> Seq.map (fun s -> makeData s.Rows)
 
-    let angles = measurements.[0].Rows
+    let angles () = (measurements()).[0].Rows 
                     |> Seq.filter (fun x -> x.MeasurementType = "DipAndStrike") 
                     |> Seq.map (fun x -> (x.DipAzimuth)) |> Binning.halfShift buckets
 
     let keys = generateLabels buckets
-    let dipData' = angles |> Binning.indices buckets |> Binning.bin buckets |> Seq.mapi (fun i x -> (keys.[i],x)) |> Seq.toList
-    let dipData = dipData', 1910    
+    let dipData' () = angles () |> Binning.indices buckets |> Binning.bin buckets |> Seq.mapi (fun i x -> (keys.[i],x)) |> Seq.toList
+    let dipData () = dipData'(), 1910    
      
     type Data = list<string * float> * int
     type Model = { values : Data; animation : Option<float * Data * Data> }
@@ -282,7 +282,7 @@ module AngularHistogram =
                 yield! circles
             ]
             button [onMouseClick (fun _ -> StartTween twentytwelf)] [text "2012"]
-            button [onMouseClick (fun _ -> StartTween dipData)] [text "capeDesire"]
+            button [onMouseClick (fun _ -> StartTween (dipData ()))] [text "capeDesire"]
         ]
 
     let subscriptions m =
@@ -290,11 +290,11 @@ module AngularHistogram =
             | Some _ ->  Time.everyMs 10.0 (fun _ -> TimeStep 10.0)
             | _ -> Sub.none
 
-    let initial = { values = dipData; animation = None }
+    let initial () = { values = dipData(); animation = None }
 
-    let app =  
+    let app () =  
         {
-            initial = initial
+            initial = initial ()
             update = update
             view = view
             subscriptions = subscriptions

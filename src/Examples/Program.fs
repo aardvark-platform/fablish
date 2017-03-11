@@ -387,9 +387,9 @@ let main argv =
 //    let app = AngularHistogram.app
     //let app = Numeric.app
 
-    //let app = RadialDiagram.app
+    let app = RadialDiagram.app ()
 
-    let app = Color.app
+    //let app = Color.app
 
     let runWindow = true        
 
