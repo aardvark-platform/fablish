@@ -1,4 +1,8 @@
-﻿module Examples
+﻿#if INTERACTIVE
+#r "../../packages/Aardvark.Base/lib/net45/Aardvark.Base.dll"
+#else
+#endif
+module Examples
 
 module RadialDiagram =
 
@@ -298,5 +302,58 @@ module AngularHistogram =
             update = update
             view = view
             subscriptions = subscriptions
+            onRendered = OnRendered.ignore
+        }
+
+
+module OrderedRects =
+
+    open Aardvark.Base
+    open Fablish
+    open Fable.Helpers.Virtualdom
+    open Fable.Helpers.Virtualdom.Html
+
+    type Model = list<string>
+
+    type Action = | Drag of int * V2d | Drop of V2d
+
+    let (=>) a b = attribute a b
+
+    let update e m a = m
+
+    let colors = ["#edf8fb"; "#b2e2e2"; "#66c2a4";"#2ca25f";"#006d2c" ]
+
+    let view (m : Model) : DomNode<Action> =    
+        let cnt = 1.0 / float (List.length m)
+
+        let left,right = List.splitAt (List.length m / 2) m
+
+        let w = 1000.0
+        let y = 50.0
+        let center = w / 2.0
+        let height = 20.0
+        let elements xs = 
+            xs |> List.mapi (fun i e -> float i * cnt * w)
+
+        let boxes =
+            elements m |> List.mapi (fun i x -> 
+                let x = string (x+50.0)
+                elem "svg" [clazz "svg-rect"; "width" => "100"; "height" => string height; "x" => string x; "y" => string y] [
+                    rect [ "width" => "100%"; "height" => "100%"; "rx" => "10"; "ry" => "10"; "fill" => List.item i colors] []
+                    elem "text" ["x" => "50%"; "y" => "50%"; "alignmentBaseline" => "middle"; "textAnchor" => "middle"; "fill" => "black" ] [text "ABC"]
+                ]
+             )
+
+        svg [ viewBox "0 0 1000 200"; width "100%"; ] boxes
+        
+
+    let initial = [ "a"; "b"; "c"; "d"; "e" ]
+
+    let app  =  
+        {
+            initial = initial
+            update = update
+            view = view
+            subscriptions = Subscriptions.none
             onRendered = OnRendered.ignore
         }
