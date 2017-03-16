@@ -313,20 +313,40 @@ module OrderedRects =
     open Fable.Helpers.Virtualdom
     open Fable.Helpers.Virtualdom.Html
 
-    type Model = list<string>
+    
 
-    type Action = | Drag of int * V2d | Drop of V2d
+    type Model = {
+        selected : option<int>
+        objs : list<string>
+        }
+
+    type Action = 
+        | Select of int
+        | Deselect
+        | Drag of int * V2d 
+        | Drop of V2d
 
     let (=>) a b = attribute a b
 
-    let update e m a = m
+    let update e (m : Model) a =
+        match a with
+        | Select i -> 
+            printf "Selected: %A Text: %A \n" i m.objs.[i]            
+            let sel = match m.selected with
+                        | None ->  Some i
+                        | Some k -> if k = i then None else Some i            
+            { m with selected = sel }
+        | Deselect -> 
+            printf "Deselect"
+            {m with selected = None}
+        | _ -> m
 
     let colors = ["#edf8fb"; "#b2e2e2"; "#66c2a4";"#2ca25f";"#006d2c" ]
 
     let view (m : Model) : DomNode<Action> =    
-        let cnt = 1.0 / float (List.length m)
+        let cnt = 1.0 / float (List.length m.objs)
 
-        let left,right = List.splitAt (List.length m / 2) m
+        let left,right = List.splitAt (List.length m.objs / 2) m.objs
 
         let w = 1000.0
         let y = 50.0
@@ -335,19 +355,42 @@ module OrderedRects =
         let elements xs = 
             xs |> List.mapi (fun i e -> float i * cnt * w)
 
+        let isSelected i m =
+            match m.selected with
+                | None -> false
+                | Some k -> i = k 
+
+        let color m i =
+            if isSelected i m 
+                then "#feb24c"
+                else List.item i colors
+                                                         
         let boxes =
-            elements m |> List.mapi (fun i x -> 
+            elements m.objs |> List.mapi (fun i x -> 
+                let o = m.objs.[i]
                 let x = string (x+50.0)
-                elem "svg" [clazz "svg-rect"; "width" => "100"; "height" => string height; "x" => string x; "y" => string y] [
-                    rect [ "width" => "100%"; "height" => "100%"; "rx" => "10"; "ry" => "10"; "fill" => List.item i colors] []
-                    elem "text" ["x" => "50%"; "y" => "50%"; "alignmentBaseline" => "middle"; "textAnchor" => "middle"; "fill" => "black" ] [text "ABC"]
+                elem "svg" [clazz "svg-rect noselect"; 
+                            "width" => "100"; 
+                            "height" => string height; 
+                            "x" => string x; 
+                            "y" => string y;
+                            onMouseDown (fun _ -> Select i);
+                            onMouseOut (fun _ -> Deselect)
+                            onMouseUp (fun _ -> Deselect)] [
+                    rect [ "width" => "100%"; "height" => "100%"; 
+                           "rx" => "10"; "ry" => "10"; 
+                           "fill" => color m i] []
+                    elem "text" ["x" => "50%"; "y" => "50%"; "alignmentBaseline" => "middle"; "textAnchor" => "middle"; "fill" => "black" ] [text (string o)]
                 ]
              )
 
         svg [ viewBox "0 0 1000 200"; width "100%"; ] boxes
         
 
-    let initial = [ "a"; "b"; "c"; "d"; "e" ]
+    let initial = {
+        selected = None
+        objs = [ "a"; "b"; "c"; "d"; "e" ]
+        }
 
     let app  =  
         {

@@ -387,7 +387,7 @@ let main argv =
 //    let app = AngularHistogram.app
     //let app = Numeric.app
 
-    let app = RadialDiagram.app ()
+ //   let app = RadialDiagram.app ()
 
     let app = OrderedRects.app 
 
