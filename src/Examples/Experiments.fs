@@ -318,7 +318,13 @@ module OrderedRects =
     type Model = {
         selected : option<int>
         objs : list<string>
+        drag : V2d
         }
+
+    let isSelected i m =
+            match m.selected with
+                | None -> false
+                | Some k -> i = k 
 
     type Action = 
         | Select of int
@@ -328,6 +334,16 @@ module OrderedRects =
 
     let (=>) a b = attribute a b
 
+    let onMove (f : Aardvark.Base.V2d -> 'msg) =
+        let clientMove = 
+            """function(ev) { 
+                return { X : ev.clientX.toFixed(), Y : ev.clientY.toFixed() };
+            }"""
+        let serverMove (str : string) : Aardvark.Base.V2d = 
+            Pickler.json.UnPickleOfString str // up is down in mouse wheel events
+
+        ClientEvent("onMouseMove", clientMove, serverMove >> f)
+
     let update e (m : Model) a =
         match a with
         | Select i -> 
@@ -336,9 +352,14 @@ module OrderedRects =
                         | None ->  Some i
                         | Some k -> if k = i then None else Some i            
             { m with selected = sel }
-        | Deselect -> 
-            printf "Deselect"
+        | Deselect ->             
             {m with selected = None}
+        | Drag(i,d) -> 
+            
+            if isSelected i m 
+                then printf "x: %A \n" d.X
+                     {m with drag=d}                      
+                else m
         | _ -> m
 
     let colors = ["#edf8fb"; "#b2e2e2"; "#66c2a4";"#2ca25f";"#006d2c" ]
@@ -355,10 +376,7 @@ module OrderedRects =
         let elements xs = 
             xs |> List.mapi (fun i e -> float i * cnt * w)
 
-        let isSelected i m =
-            match m.selected with
-                | None -> false
-                | Some k -> i = k 
+       
 
         let color m i =
             if isSelected i m 
@@ -367,20 +385,28 @@ module OrderedRects =
                                                          
         let boxes =
             elements m.objs |> List.mapi (fun i x -> 
-                let o = m.objs.[i]
-                let x = string (x+50.0)
+                let o = m.objs.[i]                
+                let x = if isSelected i m then string (m.drag.X) else string (x+50.0)
+
                 elem "svg" [clazz "svg-rect noselect"; 
                             "width" => "100"; 
                             "height" => string height; 
                             "x" => string x; 
                             "y" => string y;
-                            onMouseDown (fun _ -> Select i);
-                            onMouseOut (fun _ -> Deselect)
+                            onMouseDown (fun _ -> Select i)
+                            onMove(fun d -> Drag(i,d))
+                 //           onMouseOut (fun _ -> Deselect)
                             onMouseUp (fun _ -> Deselect)] [
-                    rect [ "width" => "100%"; "height" => "100%"; 
-                           "rx" => "10"; "ry" => "10"; 
-                           "fill" => color m i] []
-                    elem "text" ["x" => "50%"; "y" => "50%"; "alignmentBaseline" => "middle"; "textAnchor" => "middle"; "fill" => "black" ] [text (string o)]
+
+                        rect [ "width" => "100%"; "height" => "100%"
+                               "rx" => "10"; "ry" => "10" 
+                               "fill" => color m i] []
+
+                        elem "text" ["x" => "50%"; "y" => "50%" 
+                                     "pointerEvents" => "none"
+                                     "alignmentBaseline" => "middle"; 
+                                     "textAnchor" => "middle";
+                                     "fill" => "black" ] [text (string o)]
                 ]
              )
 
@@ -390,6 +416,7 @@ module OrderedRects =
     let initial = {
         selected = None
         objs = [ "a"; "b"; "c"; "d"; "e" ]
+        drag = V2d.Zero
         }
 
     let app  =  
