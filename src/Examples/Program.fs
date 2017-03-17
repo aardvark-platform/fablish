@@ -389,7 +389,9 @@ let main argv =
 
  //   let app = RadialDiagram.app ()
 
-    let app = OrderedRects.app 
+    //let app = OrderedRects.app 
+
+    let app = HalfOrderedRects.app 
 
     //let app = Color.app
 

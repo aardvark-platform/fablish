@@ -242,7 +242,7 @@ module Fablish =
                 | None -> (fun (model : 'model) msg -> app.update instance.Env model msg |> instance.EmitModel)
         
         let cts = new CancellationTokenSource()
-        let listening,server = startWebServerAsync defaultConfig (runApp path instance onMessage app)
+        let listening,server = startWebServerAsync config (runApp path instance onMessage app)
         
         let t = Async.StartAsTask(server,cancellationToken = cts.Token)
         listening |> Async.RunSynchronously |> printfn "[Fablish-suave] start stats: %A"

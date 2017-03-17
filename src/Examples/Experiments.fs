@@ -368,8 +368,7 @@ module OrderedRects =
             | StopDragging       -> { m with drag = None } // do snapping
             | MouseMove mousePos -> 
                 match m.drag with
-                    | Some (i,d) -> 
-                        printf "cursorPos: %A" (mousePos-d)
+                    | Some (i,d) ->                         
                         { m with currentTrafo = Some (i, mousePos-d); }
                     | _ -> m
 
@@ -427,10 +426,9 @@ module OrderedRects =
                 ]
              )
 
-        div [] [
-            text "hello"
-            svg [ attribute "id" "rect"; viewBox "0 0 1000 1000"; width "1000px"; "height" => "1000px"; getPositionOn "onMouseMove" MouseMove; onMouseUp (fun _ -> StopDragging);  ] boxes
-            text "world"
+        div [] [            
+            svg [ attribute "id" "rect"; viewBox "0 0 1000 1000"; width "1000px"; "height" => "1000px";
+            getPositionOn "onMouseMove" MouseMove; onMouseUp (fun _ -> StopDragging);  ] boxes            
         ]
         
 
@@ -438,6 +436,182 @@ module OrderedRects =
         drag = None
         objs = [ "a"; "b"; "c"; "d"; "e" ]
         currentTrafo = None
+        }
+
+    let app  =  
+        {
+            initial = initial
+            update = update
+            view = view
+            subscriptions = Subscriptions.none
+            onRendered = OnRendered.ignore
+        }
+
+module HalfOrderedRects =
+
+    open Aardvark.Base
+    open Fablish
+    open Fable.Helpers.Virtualdom
+    open Fable.Helpers.Virtualdom.Html
+    
+    type Index = int * int
+
+    type Model = {
+        data    : list<string>
+        ordering : list<list<string>>
+        
+        // currently dragging something
+        drag    : Option<Index*V2d>
+
+        // where is the mouse
+        currentTrafo : Option<Index*V2d>
+    }
+   
+    type Action = 
+        | StartDragging of Index * V2d
+        | StopDragging of V2d
+        | MouseMove of V2d 
+
+    let (=>) a b = attribute a b
+
+    let getPositionOn (evtName : string) (f : Aardvark.Base.V2d -> 'msg) =
+        let clientScript = 
+            """function(evt) { 
+
+                var rect = document.getElementById("rect").getBoundingClientRect();
+    
+                var r = { X : (ev.clientX-rect.left).toFixed(), Y : (ev.clientY-rect.top).toFixed() }
+                return r;
+            }"""
+        let serverReaction (str : string) : Aardvark.Base.V2d = 
+            Pickler.json.UnPickleOfString str 
+
+        ClientEvent(evtName, clientScript, serverReaction >> f)
+
+    let getPositionOnHack (evtName : string) (f : Aardvark.Base.V2d -> 'msg) =
+        let clientScript = 
+            """function(evt) { 
+
+                    var e = evt.target;
+                    var dim = e.getBoundingClientRect();
+                    var x = evt.clientX - dim.left;
+                    var y = evt.clientY - dim.top;
+
+                    return { X : x.toFixed(), Y : y.toFixed() };
+            }""" 
+        let serverReaction (str : string) : Aardvark.Base.V2d = 
+            Pickler.json.UnPickleOfString str 
+
+        ClientEvent(evtName, clientScript, serverReaction >> f)
+
+
+    let bin (x : int) (w : int) = (int x / w) 
+    let raster (x : int) (w : int) = (bin x w) * w
+
+    let removeAtIndex xs i = xs |> Seq.zip (Seq.initInfinite id) |> Seq.filter (fun (eid,e) -> eid <> i) |> Seq.map snd |> Seq.toList
+
+    let rec insertAt i xs v =
+        if i = 0 then v :: xs
+        else
+            match xs with
+                | x::xs -> x::insertAt (i-1) xs v
+                | [] ->[v]
+
+    let moveElem (xs : list<list<'a>>) ((x,y):Index) ((nx,ny) : Index) =
+        if nx = x then xs
+        else
+            let overlap = (nx - List.length xs)+1
+            let xs = if overlap > 0 then xs @ List.replicate overlap [] else xs
+            let movedElement = List.item y (List.item x xs)
+            xs |> List.mapi (fun i d -> 
+                if i = x then removeAtIndex d y
+                elif i = nx then  d @ [movedElement] //insertAt ny d movedElement 
+                else d
+            ) |> List.filter (not << List.isEmpty)
+
+    let update e (m : Model) a =
+        match a with
+            | StartDragging(i,d) -> { m with drag = Some (i,d) }
+            | StopDragging p -> 
+                match m.drag with
+                    | Some (oldIndex,_) -> 
+                        let newIndex = bin (int p.X) 120, bin (int p.Y) 45
+                        printf "dragged: %A to %A" oldIndex newIndex
+                        { m with drag = None; ordering = moveElem m.ordering oldIndex newIndex; currentTrafo = None }
+                    | _ -> { m with drag = None; currentTrafo = None }
+            | MouseMove mousePos -> 
+                match m.drag with
+                    | Some (i,d) ->                         
+                        { m with currentTrafo = Some (i, mousePos-d); }
+                    | _ -> m
+
+    let colors = ["#ffffd4"; "#fed98e"; "#fe9929";"#d95f0e";"#993404" ]
+
+    let view (m : Model) : DomNode<Action> =    
+          
+        let w = 1000.0
+        let y = 50.0
+        let spacing = 20
+        let center = w / 2.0
+        let height = 40.0
+                                                                     
+        
+        let drawElem (id : Index) (x:int,y:int) (color:string) t = 
+            let color = 
+                match m.drag with
+                    | Some (h,_) when h = id -> "#feb24c"
+                    | _ -> List.item (fst id) colors
+
+            let x = raster x 120
+
+            let position, zOrder =
+                match m.currentTrafo with
+                    | Some(elem,s) when elem = id -> s, 1
+                    | _ -> V2d(x,y), 0
+
+
+
+            elem "svg" [
+                clazz "svg-rect noselect"; 
+                "width" => "100"; 
+                "height" => string height; 
+                "stroke" => "black"
+                "x" => string position.X
+                "y" => string position.Y
+                ] [
+                    rect [ "width" => "100%"; "height" => "100%"; "rx" => "10"; "ry" => "10"; "fill" => (List.item (fst id) colors);
+                            getPositionOnHack "onMouseDown" (fun p -> StartDragging(id,p))] []
+
+                    elem "text" ["x" => "50%"; "y" => "50%" 
+                                 "pointerEvents" => "none"
+                                 "alignmentBaseline" => "middle"; 
+                                 "textAnchor" => "middle";
+                                 "fill" => "black" ] [text t] //[text (sprintf "%i %i" (int position.X) (int position.Y))]
+            ], zOrder
+
+        let colums = 
+            m.ordering 
+             |> List.mapi (fun i d -> 
+                    let x = i * (100 + 20)            
+                    d |> List.mapi (fun j k ->
+                        let index = i,j
+                        let y = j * (40 + 5)                 
+                        drawElem index (x,y) colors.[i] k
+                    )
+                ) 
+             |> List.concat |> List.sortBy snd |> List.map fst
+ 
+
+        div [] [            
+            svg [ attribute "id" "rect"; viewBox "0 0 1000 1000"; width "1000px"; "height" => "1000px";
+            getPositionOn "onMouseMove" MouseMove; getPositionOn "onMouseUp" StopDragging ] colums            
+        ]
+        
+    let initial = {
+            drag = None
+            data = [ "a"; "b"; "c"; "d"; "e" ]
+            ordering = [ [ "a"; "b"; "c"];["d"; "e"];]
+            currentTrafo = None
         }
 
     let app  =  
