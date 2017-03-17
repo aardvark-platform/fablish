@@ -312,55 +312,66 @@ module OrderedRects =
     open Fablish
     open Fable.Helpers.Virtualdom
     open Fable.Helpers.Virtualdom.Html
-
     
-
     type Model = {
-        selected : option<int>
-        objs : list<string>
-        drag : V2d
-        }
+        objs    : list<string>
+        
+        // currently dragging something
+        drag    : Option<int*V2d>
 
-    let isSelected i m =
-            match m.selected with
-                | None -> false
-                | Some k -> i = k 
+        // where is the mouse
+        currentTrafo : Option<int*V2d>
+    }
+
 
     type Action = 
-        | Select of int
-        | Deselect
-        | Drag of int * V2d 
-        | Drop of V2d
+        | StartDragging of int * V2d
+        | StopDragging
+        | MouseMove of V2d 
 
     let (=>) a b = attribute a b
 
-    let onMove (f : Aardvark.Base.V2d -> 'msg) =
-        let clientMove = 
-            """function(ev) { 
-                return { X : ev.clientX.toFixed(), Y : ev.clientY.toFixed() };
-            }"""
-        let serverMove (str : string) : Aardvark.Base.V2d = 
-            Pickler.json.UnPickleOfString str // up is down in mouse wheel events
+    let getPositionOn (evtName : string) (f : Aardvark.Base.V2d -> 'msg) =
+        let clientScript = 
+            """function(evt) { 
 
-        ClientEvent("onMouseMove", clientMove, serverMove >> f)
+                var rect = document.getElementById("rect").getBoundingClientRect();
+    
+                var r = { X : (ev.clientX-rect.left).toFixed(), Y : (ev.clientY-rect.top).toFixed() }
+                return r;
+            }"""
+        let serverReaction (str : string) : Aardvark.Base.V2d = 
+            Pickler.json.UnPickleOfString str 
+
+        ClientEvent(evtName, clientScript, serverReaction >> f)
+
+    let getPositionOnHack (evtName : string) (relativeTo : string) (f : Aardvark.Base.V2d -> 'msg) =
+        let clientScript = 
+            """function(evt) { 
+
+                    var e = evt.target;
+                    var dim = e.getBoundingClientRect();
+                    var x = evt.clientX - dim.left;
+                    var y = evt.clientY - dim.top;
+
+                    return { X : x.toFixed(), Y : y.toFixed() };
+            }""" 
+        let serverReaction (str : string) : Aardvark.Base.V2d = 
+            Pickler.json.UnPickleOfString str 
+
+        ClientEvent(evtName, clientScript, serverReaction >> f)
+
 
     let update e (m : Model) a =
         match a with
-        | Select i -> 
-            printf "Selected: %A Text: %A \n" i m.objs.[i]            
-            let sel = match m.selected with
-                        | None ->  Some i
-                        | Some k -> if k = i then None else Some i            
-            { m with selected = sel }
-        | Deselect ->             
-            {m with selected = None}
-        | Drag(i,d) -> 
-            
-            if isSelected i m 
-                then printf "x: %A \n" d.X
-                     {m with drag=d}                      
-                else m
-        | _ -> m
+            | StartDragging(i,d) -> { m with drag = Some (i,d) }
+            | StopDragging       -> { m with drag = None } // do snapping
+            | MouseMove mousePos -> 
+                match m.drag with
+                    | Some (i,d) -> 
+                        printf "cursorPos: %A" (mousePos-d)
+                        { m with currentTrafo = Some (i, mousePos-d); }
+                    | _ -> m
 
     let colors = ["#edf8fb"; "#b2e2e2"; "#66c2a4";"#2ca25f";"#006d2c" ]
 
@@ -372,51 +383,61 @@ module OrderedRects =
         let w = 1000.0
         let y = 50.0
         let center = w / 2.0
-        let height = 20.0
+        let height = 40.0
         let elements xs = 
             xs |> List.mapi (fun i e -> float i * cnt * w)
 
-       
-
-        let color m i =
-            if isSelected i m 
-                then "#feb24c"
-                else List.item i colors
+    
                                                          
         let boxes =
             elements m.objs |> List.mapi (fun i x -> 
-                let o = m.objs.[i]                
-                let x = if isSelected i m then string (m.drag.X) else string (x+50.0)
+                let o = m.objs.[i]                                       
+
+                let color = 
+                    match m.drag with
+                        | Some (h,_) when h = i -> "#feb24c"
+                        | _ -> List.item i colors
+
+                let position =
+                    match m.currentTrafo with
+                        | Some(elem,s) when elem = i -> s
+                        | _ -> V2d(x,y)
+
+                let id = sprintf "box_%d" i
 
                 elem "svg" [clazz "svg-rect noselect"; 
                             "width" => "100"; 
                             "height" => string height; 
-                            "x" => string x; 
-                            "y" => string y;
-                            onMouseDown (fun _ -> Select i)
-                            onMove(fun d -> Drag(i,d))
-                 //           onMouseOut (fun _ -> Deselect)
-                            onMouseUp (fun _ -> Deselect)] [
+                            "stroke" => "black"
+                            "x" => string position.X; 
+                            "y" => string position.Y;    
+                           ] [
 
                         rect [ "width" => "100%"; "height" => "100%"
                                "rx" => "10"; "ry" => "10" 
-                               "fill" => color m i] []
+                               "fill" => color
+                               "id" => id                        
+                               getPositionOnHack "onMouseDown" id (fun p -> StartDragging(i,p))] []
 
                         elem "text" ["x" => "50%"; "y" => "50%" 
                                      "pointerEvents" => "none"
                                      "alignmentBaseline" => "middle"; 
                                      "textAnchor" => "middle";
-                                     "fill" => "black" ] [text (string o)]
+                                     "fill" => "black" ] [text (sprintf "%i %i" (int position.X) (int position.Y))]
                 ]
              )
 
-        svg [ viewBox "0 0 1000 200"; width "100%"; ] boxes
+        div [] [
+            text "hello"
+            svg [ attribute "id" "rect"; viewBox "0 0 1000 1000"; width "1000px"; "height" => "1000px"; getPositionOn "onMouseMove" MouseMove; onMouseUp (fun _ -> StopDragging);  ] boxes
+            text "world"
+        ]
         
 
     let initial = {
-        selected = None
+        drag = None
         objs = [ "a"; "b"; "c"; "d"; "e" ]
-        drag = V2d.Zero
+        currentTrafo = None
         }
 
     let app  =  
