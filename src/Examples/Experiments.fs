@@ -456,7 +456,11 @@ module HalfOrderedRects =
     
     type Index = int * int
 
+    type Data = Map<string,V2d>
+    type Animation = { from : Data; target : Data; current : Data; t : double }
+
     type Model = {
+        
         data    : list<string>
         ordering : list<list<string>>
         
@@ -465,12 +469,15 @@ module HalfOrderedRects =
 
         // where is the mouse
         currentTrafo : Option<Index*V2d>
+
+        animation : Option<Animation>
     }
    
     type Action = 
         | StartDragging of Index * V2d
         | StopDragging of V2d
         | MouseMove of V2d 
+        | TimeStep of double
 
     let (=>) a b = attribute a b
 
@@ -529,6 +536,25 @@ module HalfOrderedRects =
                 else d
             ) |> List.filter (not << List.isEmpty)
 
+
+    let genKeyFrame (m : Model) =
+        m.ordering 
+            |> List.mapi (fun i d -> 
+                let x = i * (100 + 20)            
+                d |> List.mapi (fun j k ->
+                    let index = i,j
+                    let y = j * (40 + 5)                 
+                    let x = raster x 120
+
+                    match m.currentTrafo with
+                        | Some(elem,s) when elem = index -> 
+                            None
+                        | _ -> Some( k, V2d(x,y))
+                ) |> List.choose id
+            ) |> List.concat |> Map.ofList
+
+        
+
     let update e (m : Model) a =
         match a with
             | StartDragging(i,d) -> { m with drag = Some (i,d) }
@@ -537,7 +563,13 @@ module HalfOrderedRects =
                     | Some (oldIndex,_) -> 
                         let newIndex = bin (int p.X) 120, bin (int p.Y) 45
                         printf "dragged: %A to %A" oldIndex newIndex
-                        { m with drag = None; ordering = moveElem m.ordering oldIndex newIndex; currentTrafo = None }
+
+                        let newModel = { m with drag = None; ordering = moveElem m.ordering oldIndex newIndex; currentTrafo = None }
+                        let oldKeyFrame = genKeyFrame m
+                        let newKeyFrame = genKeyFrame newModel 
+                         
+                        { newModel with animation = Some { from = oldKeyFrame; target = newKeyFrame; t = 0.0; current = oldKeyFrame } }
+                        
                     | _ -> { m with drag = None; currentTrafo = None }
             | MouseMove mousePos -> 
                 match m.drag with
@@ -545,7 +577,27 @@ module HalfOrderedRects =
                         { m with currentTrafo = Some (i, mousePos-d); }
                     | _ -> m
 
-    let colors = ["#ffffd4"; "#fed98e"; "#fe9929";"#d95f0e";"#993404" ]
+            | TimeStep dt -> 
+                match m.animation with
+                    | None -> m
+                    | Some a -> 
+                        let positions =
+                            [
+                                for d in m.data do
+                                    match Map.tryFind d a.from, Map.tryFind d a.target with
+                                        | Some f, Some t -> 
+                                            let interpolated = f + (t-f)*a.t
+                                            yield Some (d, interpolated)
+                                        | _ -> yield None
+                            ] |> List.choose id |> Map.ofList
+                  //      printfn "%A %A" a.t positions
+                        let t = min 1.0 (a.t + (dt * 0.03))// * (1.0-a.t)*(1.0-a.t)))
+                        if t >= 1.0 then { m with animation = None }
+                        else { m with animation = Some { a with t = t; current = positions }}
+
+
+    //let colors = ["#ffffd4"; "#fed98e"; "#fe9929";"#d95f0e";"#993404" ]
+    let colors = ["rgb(255,255,212)"; "rgb(254,217,142)"; "rgb(254,153,41)";"rgb(217,95,14)";"rgb(153,52,4)" ]
 
     let view (m : Model) : DomNode<Action> =    
           
@@ -567,7 +619,13 @@ module HalfOrderedRects =
             let position, zOrder =
                 match m.currentTrafo with
                     | Some(elem,s) when elem = id -> s, 1
-                    | _ -> V2d(x,y), 0
+                    | _ -> 
+                        match m.animation with
+                            | None -> V2d(x,y), 0
+                            | Some a -> 
+                                match Map.tryFind t a.current with
+                                    | None -> V2d(x,y), 0
+                                    | Some p -> p,0
 
 
 
@@ -575,7 +633,8 @@ module HalfOrderedRects =
                 clazz "svg-rect noselect"; 
                 "width" => "100"; 
                 "height" => string height; 
-                "stroke" => "black"
+                //"stroke" => "black"
+                //"strokeWidth" => "2px"
                 "x" => string position.X
                 "y" => string position.Y
                 ] [
@@ -607,11 +666,17 @@ module HalfOrderedRects =
             getPositionOn "onMouseMove" MouseMove; getPositionOn "onMouseUp" StopDragging ] colums            
         ]
         
+    let subscriptions m =
+        match m.animation with
+            | Some _ ->  Time.everyMs 5.0 (fun _ -> TimeStep 5.0)
+            | _ -> Sub.none
+
     let initial = {
             drag = None
             data = [ "a"; "b"; "c"; "d"; "e" ]
             ordering = [ [ "a"; "b"; "c"];["d"; "e"];]
             currentTrafo = None
+            animation = None
         }
 
     let app  =  
@@ -619,6 +684,6 @@ module HalfOrderedRects =
             initial = initial
             update = update
             view = view
-            subscriptions = Subscriptions.none
+            subscriptions = subscriptions
             onRendered = OnRendered.ignore
         }
