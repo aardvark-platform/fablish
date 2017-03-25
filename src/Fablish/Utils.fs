@@ -33,11 +33,12 @@ module Utils =
         open System.Threading
 
         type Id = int
-        type ID() =
-            let mutable currentId = 0
+        type ID(initial : int) =
+            let mutable currentId = initial
             member x.New () =
                 Interlocked.Increment(&currentId)
-            member x.All = [ 0 .. currentId ]
+            member x.All = [ initial .. currentId ]
+            new() = ID(0)
 
     [<AutoOpen>]
     module NetExtensions =

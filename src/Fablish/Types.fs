@@ -69,7 +69,7 @@ type FablishInstance<'model,'msg>(m : 'model, env : Option<Env<'msg>>, update : 
                 model.Value
         )
 
-    member x.Run(f : unit -> 'b) = lock viewers (fun _ -> f ())
+    member x.Run(f : unit -> 'b) = f() // lock (fun _ -> f ())
 
     member x.AddViewer m =
         lock viewers (fun _ -> 
