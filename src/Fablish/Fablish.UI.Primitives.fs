@@ -233,7 +233,7 @@ module Numeric =
         onRendered = OnRendered.ignore
     }
 
-    let app = app' [InputType.InputBox; InputType.InputBox; InputType.Slider]
+    let app = app' [InputType.InputBox]
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module NumericOld = 
@@ -298,7 +298,7 @@ module Vector3d =
 
     type Model = Vector3d
 
-    type Action = 
+    type Action = //Vector3d.Action
         | Set_X   of Numeric.Action
         | Set_Y   of Numeric.Action    
         | Set_Z   of Numeric.Action
@@ -314,7 +314,7 @@ module Vector3d =
             tbody [] [
                 tr [] [
                     td [clazz "collapsing"] [text "X:"];
-                    td [clazz "right aligned"] [Numeric.view model.x |> Html.map Set_X]
+                    td [clazz "right aligned"] [Numeric.view model.x |> Html.map (fun x -> Set_X x )]
                 ]
                 tr [] [
                     td [clazz "collapsing"] [text "Y:"];
@@ -345,6 +345,7 @@ module Vector3d =
 module Transformation =
     open DomHelpers
 
+
     type Model = {
         translation : Vector3d.Model
         rotation    : Vector3d.Model
@@ -355,12 +356,15 @@ module Transformation =
         | Set_Translation   of Vector3d.Action
         | Set_Rotation      of Vector3d.Action    
         | Set_Scale         of Vector3d.Action
+        | Reset
 
     let update env (model : Model) (action : Action) =
         match action with
             | Set_Translation a -> { model with translation = Vector3d.update env model.translation a }
             | Set_Rotation a -> { model with rotation = Vector3d.update env model.rotation a }
             | Set_Scale a -> { model with scale = Vector3d.update env model.scale a }
+            | Reset -> { model with translation = Vector3d.initial; rotation = Vector3d.initial; scale = Vector3d.initial }
+            //| _ -> model
 
     let view (model : Model) : DomNode<Action> =
         table [clazz "ui celled table"] [
@@ -376,6 +380,12 @@ module Transformation =
                         tr [] [
                             td [clazz "collapsing"] [text "Scale:"];
                             td [clazz "right aligned"] [Vector3d.view model.scale |> Html.map Set_Scale]
+                        ]
+
+                        tr [] [
+                            
+                            td [clazz "collapsing"] [button [onMouseClick (fun _ -> Reset)] [text "Reset"]];
+                            td [clazz "right aligned"] []
                         ]
                     ]
         ]     
