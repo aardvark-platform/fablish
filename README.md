@@ -1,7 +1,7 @@
-[![Build Status](https://travis-ci.org/aardvarkplatform/fablish.svg?branch=master)](https://travis-ci.org/aardvarkplatform/fablish)
+[![Build Status](https://travis-ci.org/aardvark-platform/fablish.svg?branch=master)](https://travis-ci.org/aardvark-platform/fablish)
 [![Build status](https://ci.appveyor.com/api/projects/status/caihtu3i3697i6o2/branch/master?svg=true)](https://ci.appveyor.com/project/haraldsteinlechner/fablish/branch/master)
 
-[Wiki](https://github.com/aardvarkplatform/aardvark.docs/wiki) | 
+[Wiki](https://github.com/aardvark-platform/aardvark.docs/wiki) | 
 [Gallery](https://github.com/aardvarkplatform/aardvark.docs/wiki/Gallery) | 
 [Quickstart](https://github.com/aardvarkplatform/aardvark.docs/wiki/Quickstart-Windows) | 
 [Status](https://github.com/aardvarkplatform/aardvark.docs/wiki/Status)
