@@ -6,7 +6,9 @@
 [Quickstart](https://github.com/aardvarkplatform/aardvark.docs/wiki/Quickstart-Windows) | 
 [Status](https://github.com/aardvarkplatform/aardvark.docs/wiki/Status)
 
-Fablish is part of the open-source [Aardvark platform](https://github.com/aardvark-platform/aardvark.docs/wiki) for visual computing, real-time graphics and visualization. Fablish is the predecessor of [aardvark.media](https://github.com/aardvark-platform/aardvark.media) and it demonstrates the basic concepts of functional user interfaces creation.
+**Fablish** is part of the open-source [Aardvark platform](https://github.com/aardvark-platform/aardvark.docs/wiki) for visual computing, real-time graphics and visualization. 
+
+Fablish is the **predecessor** of [aardvark.media](https://github.com/aardvark-platform/aardvark.media) and it demonstrates the basic concepts of functional user interfaces creation.
 
 # Fablish
 This library provides utilities for building Elm-style [[1]] applications in .NET.
