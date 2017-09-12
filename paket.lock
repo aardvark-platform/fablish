@@ -698,7 +698,7 @@ NUGET
       FSharp.Core
       Newtonsoft.Json
 GITHUB
-  remote: vrvis/Aardvark.Fake
+  remote: aardvark-platform/aardvark.fake
   specs:
     FULLPROJECT (eb782182b4f3b4f468ca18a7dc79239912de012a)
       FAKE (>= 4.17.0 < 4.18.0)
