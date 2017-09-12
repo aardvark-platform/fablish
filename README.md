@@ -112,11 +112,6 @@ In both cases your application can be debugged using Chrome debugging tools:
 Fablish-hmr [[4]] provides webpack-style [[5]] interactive programming by utilizing F# compiler services.
 The following video shows off this feature: [youtube video on hmr](https://www.youtube.com/watch?v=if5Natbyx0s&feature=youtu.be)
 
-## How to contribute 
-
-Note that this project is at a very early stage of development.
-Still, any help in building rich user-interface libraries is welcome ;)
-
  [1]: https://guide.elm-lang.org/architecture/
  
  [2]: http://fable.io/fable-arch/
