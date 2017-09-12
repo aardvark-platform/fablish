@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/vrvis/fablish.svg?branch=master)](https://travis-ci.org/vrvis/fablish)
+[![Build Status](https://travis-ci.org/aardvarkplatform/fablish.svg?branch=master)](https://travis-ci.org/aardvarkplatform/fablish)
 [![Build status](https://ci.appveyor.com/api/projects/status/caihtu3i3697i6o2/branch/master?svg=true)](https://ci.appveyor.com/project/haraldsteinlechner/fablish/branch/master)
 
 [Wiki](https://github.com/aardvarkplatform/aardvark.docs/wiki) | 
