@@ -25,4 +25,4 @@ source https://api.nuget.org/v3/index.json
 
 nuget ILRepack
 
-github vrvis/Aardvark.Fake:customPaket
+github aardvark-platform/aardvark.fake:customPaket
