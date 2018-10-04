@@ -1,6 +1,4 @@
 source https://api.nuget.org/v3/index.json
-source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
-
 nuget Aardvark.Base.FSharp      >= 2.4.5
 nuget Aardvark.Base.Incremental >= 2.4.5
 
@@ -20,7 +18,6 @@ nuget FSharp.Compiler.Service  ~> 8.0.0
 
 group Build
 content: none
-source https://vrvis.myget.org/F/aardvark_public/api/v3/index.json
 source https://api.nuget.org/v3/index.json
 
 nuget ILRepack
